@@ -13,6 +13,37 @@ class MonitorService
     {
     }
 
+    /**
+     * Snapshot untuk endpoint /monitor/metrics: hasil dipakai ulang selama $ttl detik.
+     * Pembacaan OS di Windows memanggil PowerShell/CIM (mahal); tanpa cache, 50 sesi yang
+     * me-refresh grafik tiap 5 detik atau uji `ab -c 50` menjenuhkan CPU (lihat A14/A16).
+     * Kunci berkas (flock) membuat hanya satu permintaan yang membaca OS; yang lain memakai hasilnya.
+     */
+    public function snapshot(int $ttl = 3): array
+    {
+        $dir = WRITEPATH . 'cache';
+        $file = $dir . DIRECTORY_SEPARATOR . 'monitor_snapshot.json';
+        $lock = fopen($dir . DIRECTORY_SEPARATOR . 'monitor_snapshot.lock', 'c');
+        if ($lock === false) {
+            return $this->collect();
+        }
+        flock($lock, LOCK_EX);
+        try {
+            if (is_file($file) && time() - (int) filemtime($file) < $ttl) {
+                $cached = json_decode((string) file_get_contents($file), true);
+                if (is_array($cached)) {
+                    return $cached;
+                }
+            }
+            $values = $this->collect();
+            file_put_contents($file, json_encode($values));
+            return $values;
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
+
     public function collect(bool $save = false): array
     {
         $reader = $this->reader ?? (PHP_OS_FAMILY === 'Windows' ? new WindowsResourceReader() : new LinuxResourceReader());

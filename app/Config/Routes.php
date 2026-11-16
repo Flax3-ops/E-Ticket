@@ -22,6 +22,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
     $routes->post('tickets/(:num)/take', 'Tickets::take/$1', ['filter' => 'role:petugas,admin']);
     $routes->post('tickets/(:num)/status', 'Tickets::status/$1');
     $routes->post('tickets/(:num)/priority', 'Tickets::priority/$1', ['filter' => 'role:admin']);
+    $routes->post('tickets/(:num)/assign', 'Tickets::assign/$1', ['filter' => 'role:admin']);
     $routes->post('tickets/(:num)/delete', 'Tickets::delete/$1', ['filter' => 'role:admin']);
     $routes->post('tickets/(:num)/comments', 'Comments::create/$1');
     $routes->post('tickets/(:num)/attachments', 'Attachments::upload/$1');
@@ -36,6 +37,7 @@ $routes->group('', ['filter' => 'role:petugas,admin'], static function (RouteCol
     $routes->get('api/alerts/active', 'Alerts::active');
 });
 $routes->group('', ['filter' => 'role:admin'], static function (RouteCollection $routes): void {
+    $routes->post('alerts/(:num)/ack', 'Alerts::acknowledge/$1');
     $routes->get('monitor', 'Monitor::index');
     $routes->get('monitor/metrics', 'Monitor::metrics');
     $routes->get('reports/tickets.xlsx', 'Reports::tickets');

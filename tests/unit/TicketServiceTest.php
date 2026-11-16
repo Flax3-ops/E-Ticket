@@ -52,4 +52,52 @@ final class TicketServiceTest extends CIUnitTestCase
         $this->assertSame('Selesai', $service->find($id)['status']);
         $this->assertSame(2, $this->db->table('ticket_logs')->where('ticket_id', $id)->countAllResults());
     }
+
+    public function testAdminAssignRequiresReasonAndActiveOfficer(): void
+    {
+        $service = new TicketService($this->db);
+        $id = $service->create($this->requester, ['title' => 'Uji penugasan admin', 'description' => 'Menguji pemindahan penugasan oleh admin.', 'category_id' => $this->category, 'priority' => 'Rendah']);
+        try {
+            $service->assign($id, $this->officer, $this->officer, '   ');
+            $this->fail('Alasan kosong harus ditolak.');
+        } catch (\DomainException) {
+            $this->assertNull($service->find($id)['assigned_to']);
+        }
+        $service->assign($id, $this->officer, $this->officer, 'Pemerataan beban kerja');
+        $ticket = $service->find($id);
+        $this->assertSame($this->officer, (int) $ticket['assigned_to']);
+        $this->assertSame('Diproses', $ticket['status']);
+        $this->expectException(\DomainException::class);
+        $service->assign($id, $this->officer, $this->requester, 'Pemohon bukan petugas');
+    }
+
+    public function testReopenWithinSevenDaysAndClosedIsFinal(): void
+    {
+        $service = new TicketService($this->db);
+        $id = $service->create($this->requester, ['title' => 'Uji buka ulang tiket', 'description' => 'Menguji aturan buka ulang dan tiket final.', 'category_id' => $this->category, 'priority' => 'Sedang']);
+        $service->take($id, $this->officer);
+        $service->changeStatus($id, $this->officer, 'petugas', 'Selesai', 'Selesai diperbaiki.');
+        $service->changeStatus($id, $this->requester, 'pemohon', 'Diproses', 'Masih bermasalah.');
+        $this->assertSame('Diproses', $service->find($id)['status']);
+        $service->changeStatus($id, $this->officer, 'petugas', 'Selesai', 'Diperbaiki ulang.');
+        $this->db->table('tickets')->where('id', $id)->update(['resolved_at' => gmdate('Y-m-d H:i:s', time() - 8 * 86400)]);
+        try {
+            $service->changeStatus($id, $this->requester, 'pemohon', 'Diproses', 'Terlambat.');
+            $this->fail('Buka ulang lewat 7 hari harus ditolak.');
+        } catch (\DomainException) {
+            $this->assertSame('Selesai', $service->find($id)['status']);
+        }
+        $service->changeStatus($id, $this->requester, 'pemohon', 'Ditutup', 'Terima kasih.');
+        $this->expectException(\DomainException::class);
+        $service->changeStatus($id, $this->requester, 'admin', 'Diproses', 'Koreksi pada tiket final.');
+    }
+
+    public function testPriorityChangeRecomputesSlaFromCreatedAt(): void
+    {
+        $service = new TicketService($this->db);
+        $id = $service->create($this->requester, ['title' => 'Uji perubahan prioritas', 'description' => 'Menguji penghitungan ulang SLA.', 'category_id' => $this->category, 'priority' => 'Rendah']);
+        $service->changePriority($id, $this->officer, 'Kritis', 'Dampak luas');
+        $ticket = $service->find($id);
+        $this->assertSame(4 * 3600, strtotime($ticket['sla_due_at'] . ' UTC') - strtotime($ticket['created_at'] . ' UTC'));
+    }
 }

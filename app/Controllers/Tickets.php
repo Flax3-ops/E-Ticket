@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Services\ActivityLogger;
 use App\Services\TicketService;
 use DomainException;
 
@@ -67,7 +68,8 @@ class Tickets extends BaseController
         $ticket['category_name'] = $db->table('categories')->where('id', $ticket['category_id'])->get()->getRow('name');
         $ticket['requester_name'] = $db->table('users')->where('id', $ticket['user_id'])->get()->getRow('name');
         $comments = $db->table('comments c')->select('c.*, u.name')->join('users u', 'u.id=c.user_id')->where('c.ticket_id', $id)->orderBy('c.id')->get()->getResultArray();
-        return view('tickets/show', ['ticket' => $ticket, 'comments' => $comments, 'attachments' => $db->table('attachments')->where('ticket_id', $id)->get()->getResultArray(), 'logs' => $db->table('ticket_logs')->where('ticket_id', $id)->orderBy('id')->get()->getResultArray()]);
+        $officers = session('role') === 'admin' ? $db->table('users')->select('id,name')->where('role', 'petugas')->where('is_active', 1)->orderBy('name')->get()->getResultArray() : [];
+        return view('tickets/show', ['officers' => $officers, 'ticket' => $ticket, 'comments' => $comments, 'attachments' => $db->table('attachments')->where('ticket_id', $id)->get()->getResultArray(), 'logs' => $db->table('ticket_logs')->where('ticket_id', $id)->orderBy('id')->get()->getResultArray()]);
     }
 
     public function edit(int $id)
@@ -92,6 +94,7 @@ class Tickets extends BaseController
         unset($data['priority']);
         $data['updated_at'] = gmdate('Y-m-d H:i:s');
         db_connect()->table('tickets')->where('id', $id)->update($data);
+        (new ActivityLogger(db_connect()))->write((int) session('user_id'), 'ticket_updated', 'tickets', $id);
         return redirect()->to('/tickets/' . $id)->with('success', 'Tiket diperbarui.');
     }
 
@@ -115,6 +118,16 @@ class Tickets extends BaseController
         }
     }
 
+    public function assign(int $id)
+    {
+        try {
+            (new TicketService(db_connect()))->assign($id, (int) session('user_id'), (int) $this->request->getPost('officer_id'), trim((string) $this->request->getPost('reason')));
+            return redirect()->to('/tickets/' . $id)->with('success', 'Penugasan dipindahkan.');
+        } catch (DomainException $e) {
+            return redirect()->to('/tickets/' . $id)->with('error', $e->getMessage());
+        }
+    }
+
     public function priority(int $id)
     {
         try {
@@ -127,7 +140,11 @@ class Tickets extends BaseController
 
     public function delete(int $id)
     {
-        db_connect()->table('tickets')->where('id', $id)->where('deleted_at', null)->update(['deleted_at' => gmdate('Y-m-d H:i:s'), 'updated_at' => gmdate('Y-m-d H:i:s')]);
+        $db = db_connect();
+        $db->table('tickets')->where('id', $id)->where('deleted_at', null)->update(['deleted_at' => gmdate('Y-m-d H:i:s'), 'updated_at' => gmdate('Y-m-d H:i:s')]);
+        if ($db->affectedRows() === 1) {
+            (new ActivityLogger($db))->write((int) session('user_id'), 'ticket_deleted', 'tickets', $id);
+        }
         return redirect()->to('/tickets')->with('success', 'Tiket dihapus secara lunak.');
     }
 

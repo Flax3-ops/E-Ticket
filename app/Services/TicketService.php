@@ -28,7 +28,7 @@ class TicketService
 
     public static function canParticipate(array $ticket, int $userId, string $role): bool
     {
-        return $ticket['deleted_at'] === null && ($role === 'admin' || ($role === 'pemohon' && (int) $ticket['user_id'] === $userId) || ($role === 'petugas' && (int) $ticket['assigned_to'] === $userId));
+        return $role === 'admin' || $ticket['deleted_at'] === null && ( ($role === 'pemohon' && (int) $ticket['user_id'] === $userId) || ($role === 'petugas' && (int) $ticket['assigned_to'] === $userId));
     }
 
     public function create(int $userId, array $data): int
@@ -147,6 +147,35 @@ class TicketService
             $this->db->table('tickets')->where('id', $ticketId)->update(['priority' => $priority, 'sla_due_at' => $due, 'updated_at' => $now]);
             $this->db->table('comments')->insert(['ticket_id' => $ticketId, 'user_id' => $actorId, 'body' => 'Prioritas diubah dari ' . $ticket['priority'] . ' ke ' . $priority . '. Alasan: ' . $reason, 'created_at' => $now, 'updated_at' => $now]);
             $this->activity->write($actorId, 'ticket_priority_changed', 'tickets', $ticketId);
+            $this->commit();
+        } catch (\Throwable $e) {
+            $this->db->transRollback();
+            throw $e;
+        }
+    }
+
+    /** F-TKT-12: Admin menetapkan atau memindahkan penugasan dengan alasan tercatat. */
+    public function assign(int $ticketId, int $adminId, int $officerId, string $reason): void
+    {
+        if (trim($reason) === '') {
+            throw new DomainException('Alasan penugasan wajib diisi.');
+        }
+        $officer = $this->db->table('users')->where('id', $officerId)->where('role', 'petugas')->where('is_active', 1)->get()->getRowArray();
+        $ticket = $this->find($ticketId);
+        if (! $officer || ! $ticket || $ticket['deleted_at'] || $ticket['status'] === 'Ditutup') {
+            throw new DomainException('Tiket atau petugas tidak valid.');
+        }
+        $now = gmdate('Y-m-d H:i:s');
+        $this->db->transBegin();
+        try {
+            $update = ['assigned_to' => $officerId, 'status_changed_by' => $adminId, 'updated_at' => $now];
+            if ($ticket['status'] === 'Baru') {
+                $update['status'] = 'Diproses';
+            }
+            $this->db->table('tickets')->where('id', $ticketId)->update($update);
+            $this->db->table('comments')->insert(['ticket_id' => $ticketId, 'user_id' => $adminId, 'body' => 'Penugasan dipindahkan ke ' . $officer['name'] . '. Alasan: ' . $reason, 'created_at' => $now, 'updated_at' => $now]);
+            $this->notifier->notify($officerId, 'ticket_assigned', 'Anda ditugaskan pada ' . $ticket['ticket_no'], '/tickets/' . $ticketId);
+            $this->activity->write($adminId, 'ticket_reassigned', 'tickets', $ticketId);
             $this->commit();
         } catch (\Throwable $e) {
             $this->db->transRollback();

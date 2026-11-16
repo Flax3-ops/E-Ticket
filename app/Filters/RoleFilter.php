@@ -10,8 +10,10 @@ class RoleFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
-        if (! session('user_id')) {
-            return redirect()->to('/login');
+        // Pemeriksaan sesi dan status akun memakai logika yang sama dengan AuthFilter.
+        $authResult = (new AuthFilter())->before($request);
+        if ($authResult !== null) {
+            return $authResult;
         }
         if (! in_array(session('role'), $arguments ?? [], true)) {
             return service('response')->setStatusCode(403)->setBody('Akses ditolak.');

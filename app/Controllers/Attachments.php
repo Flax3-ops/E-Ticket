@@ -17,13 +17,19 @@ class Attachments extends BaseController
             return redirect()->back()->with('error', 'Maksimal 3 lampiran per tiket.');
         }
         $file = $this->request->getFile('attachment');
-        if (! $file || ! $file->isValid() || $file->getSize() > 2 * 1024 * 1024 || ! in_array($file->getMimeType(), ['image/jpeg', 'image/png', 'application/pdf'], true)) {
+        $mime = $file && $file->isValid() ? $file->getMimeType() : '';
+        $size = $file && $file->isValid() ? (int) $file->getSize() : 0;
+        $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'];
+        if (! $file || ! $file->isValid() || $size > 2 * 1024 * 1024 || ! isset($extensions[$mime])) {
             return redirect()->back()->with('error', 'Lampiran harus JPG, PNG, atau PDF dengan ukuran maksimal 2 MB.');
         }
-        $stored = bin2hex(random_bytes(16)) . '.' . ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'][$file->getMimeType()];
+        // MIME dan ukuran dibaca sebelum move(): berkas sementara hilang setelah dipindahkan.
+        $stored = bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
+        $originalName = basename($file->getClientName());
         $file->move(WRITEPATH . 'uploads', $stored);
         $now = gmdate('Y-m-d H:i:s');
-        $db->table('attachments')->insert(['ticket_id' => $ticketId, 'original_name' => basename($file->getClientName()), 'stored_name' => $stored, 'mime' => $file->getMimeType(), 'size' => $file->getSize(), 'created_at' => $now, 'updated_at' => $now]);
+        $db->table('attachments')->insert(['ticket_id' => $ticketId, 'original_name' => $originalName, 'stored_name' => $stored, 'mime' => $mime, 'size' => $size, 'created_at' => $now, 'updated_at' => $now]);
+        (new \App\Services\ActivityLogger($db))->write((int) session('user_id'), 'attachment_uploaded', 'tickets', $ticketId);
         return redirect()->to('/tickets/' . $ticketId)->with('success', 'Lampiran diunggah.');
     }
 

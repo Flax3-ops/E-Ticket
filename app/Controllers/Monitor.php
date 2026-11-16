@@ -13,6 +13,6 @@ class Monitor extends BaseController
 
     public function metrics()
     {
-        return $this->response->setJSON((new MonitorService(db_connect()))->collect());
+        return $this->response->setJSON((new MonitorService(db_connect()))->snapshot());
     }
 }
