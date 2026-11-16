@@ -1,0 +1,7 @@
+<?= $this->extend('layout') ?>
+<?= $this->section('content') ?>
+<div class="page-heading"><div><p class="eyebrow">PRESENTASI LAYANAN</p><h1>Statistik layanan</h1></div><a href="<?= site_url('/') ?>" class="btn btn-outline-secondary">Kembali</a></div>
+<div class="panel text-center d-flex flex-column justify-content-center align-items-center" style="min-height:55vh"><p id="slide-label" class="eyebrow"></p><strong id="slide-value" style="font-size:clamp(4rem,12vw,9rem);line-height:1.1"></strong><canvas id="slide-chart" style="max-width:700px;max-height:270px;display:none" aria-label="Grafik status tiket"></canvas><p id="slide-description" class="text-secondary fs-4"></p><div class="progress w-75 mt-4" style="height:5px"><div id="slide-progress" class="progress-bar" style="width:0%"></div></div></div>
+<div class="d-flex justify-content-center gap-2 mt-3"><button id="prev" class="btn btn-outline-primary">← Sebelumnya</button><button id="pause" class="btn btn-primary">Jeda</button><button id="next" class="btn btn-outline-primary">Berikutnya →</button><button id="fullscreen" class="btn btn-outline-primary">Layar penuh</button></div>
+<?= $this->endSection() ?>
+<?= $this->section('scripts') ?><script src="<?= base_url('vendor/chartjs/chart.umd.min.js') ?>"></script><script>window.slidesData=<?= json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script><script src="<?= base_url('assets/js/slideshow.js') ?>"></script><?= $this->endSection() ?>

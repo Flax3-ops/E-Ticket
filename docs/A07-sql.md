@@ -1,0 +1,3 @@
+# A07 — SQL
+
+Migrasi `InitialSchema`, `DatabaseObjects`, `PerformanceIndexes`, dan `TicketSequences` berhasil pada `tiket_demo` dan `tiket_loadtest`. Definisi SQL dan contoh DML/JOIN tabel/view ada di `database/sql/01_views.sql` sampai `07_transaction_demo.sql`. View gabungan `v_dashboard` menggabungkan `v_ticket_summary` dengan `v_ticket_sla_summary` berdasarkan status. Function SLA membaca `settings`; trigger mengisi tenggat dan mencatat perubahan status. Uji HTTP pengambilan tiket #14 menghasilkan baris `ticket_logs` `Baru → Diproses` oleh pengguna #2. Contoh `COMMIT`/`ROLLBACK` harus dijalankan di database uji dan hasil sebelum/sesudah dilampirkan.

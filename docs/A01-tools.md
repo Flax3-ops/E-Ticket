@@ -1,0 +1,3 @@
+# A01 — Analisis tools
+
+Kebutuhan: lokal/offline, PHP 8.2, MariaDB, MVC, migrasi, unit test, grafik, ekspor. Pilihan: XAMPP + CI4 + Bootstrap + Chart.js + PhpSpreadsheet + Dompdf. Alternatif dan risiko rinci ada pada SRS §3. Uji nyata: `php -v` → 8.2.12, `composer --version` → 2.9.3, MariaDB → 10.4.32, `php spark migrate --all` berhasil. Scaffold CI4 4.5.x ditolak Composer karena advisori keamanan; framework 4.7.6 dipilih dan konfigurasi scaffold diperbarui. Risiko lingkungan: port 8080 telah dipakai Apache, sehingga server pengembangan memakai 8081; WMI/CIM tidak dapat diakses, sehingga monitor menampilkan status tidak tersedia.

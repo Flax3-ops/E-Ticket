@@ -1,0 +1,5 @@
+<?= $this->extend('layout') ?>
+<?= $this->section('content') ?>
+<div class="page-heading"><div><p class="eyebrow">PEMBARUAN</p><h1>Notifikasi</h1></div></div>
+<div class="table-card"><table class="table mb-0"><thead><tr><th>Pesan</th><th>Waktu WIB</th><th>Status</th><th></th></tr></thead><tbody><?php foreach ($items as $item): ?><tr><td><?= esc($item['message']) ?><?php if ($item['link']): ?> <a href="<?= site_url(ltrim($item['link'], '/')) ?>">Lihat</a><?php endif ?></td><td><?= esc(local_time($item['created_at'])) ?></td><td><?= $item['read_at'] ? 'Dibaca' : '<span class="badge text-bg-primary">Baru</span>' ?></td><td><?php if (! $item['read_at']): ?><form method="post" action="<?= site_url('notifications/' . $item['id'] . '/read') ?>"><?= csrf_field() ?><button class="btn btn-sm btn-outline-primary">Tandai dibaca</button></form><?php endif ?></td></tr><?php endforeach ?><?php if (! $items): ?><tr><td colspan="4" class="text-secondary text-center py-5">Belum ada notifikasi.</td></tr><?php endif ?></tbody></table></div>
+<?= $this->endSection() ?>

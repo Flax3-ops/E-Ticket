@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<ruleset name="Tiket Layanan">
+    <description>Gaya kode PSR-12 untuk aplikasi.</description>
+    <file>app/Controllers</file>
+    <file>app/Services</file>
+    <file>app/Libraries</file>
+    <file>app/Commands</file>
+    <rule ref="PSR12">
+        <exclude name="Generic.Files.LineLength"/>
+    </rule>
+</ruleset>

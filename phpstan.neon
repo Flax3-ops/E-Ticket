@@ -1,0 +1,9 @@
+parameters:
+    level: 5
+    paths:
+        - app/Controllers
+        - app/Services
+        - app/Libraries
+        - app/Commands
+    bootstrapFiles:
+        - vendor/codeigniter4/framework/system/Test/bootstrap.php

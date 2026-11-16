@@ -1,0 +1,3 @@
+# A10 — Migrasi teknologi
+
+Target SRS: membandingkan raw SQL `mysqli` pada v0.x dengan Query Builder CI4 pada v1.0, lalu membuktikan perilaku sama dan riwayat perubahan. Implementasi saat ini langsung memakai Query Builder untuk tiket dan belum memiliki versi aplikasi raw SQL yang pernah dijalankan. Karena itu Unit 10 **belum boleh diklaim selesai**. Rencana tindak lanjut: bangun modul baseline raw SQL yang aman (prepared statement), jalankan skenario yang sama, ukur perbedaan, dokumentasikan fitur Query Builder (binding, komposisi kondisi, transaksi), lalu lakukan migrasi nyata dengan commit sebelum/sesudah dan rencana rollback.

@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><title>PoC Grafik</title><style>body{font:16px system-ui;margin:30px}section{display:inline-block;width:45%;vertical-align:top;padding:1rem}canvas,#apex{height:300px}</style></head><body>
+<h1>PoC Chart.js dan ApexCharts</h1><p>Data identik: tiket Baru 12, Diproses 8, Selesai 15.</p>
+<section><h2>Chart.js</h2><canvas id="chart"></canvas></section><section><h2>ApexCharts</h2><div id="apex"></div></section>
+<script src="../public/vendor/chartjs/chart.umd.min.js"></script><script src="vendor/apexcharts.min.js"></script>
+<script>const labels=['Baru','Diproses','Selesai'],values=[12,8,15];new Chart(document.getElementById('chart'),{type:'bar',data:{labels,datasets:[{label:'Tiket',data:values,backgroundColor:'#2962ff'}]}});new ApexCharts(document.getElementById('apex'),{chart:{type:'bar',height:300},series:[{name:'Tiket',data:values}],xaxis:{categories:labels}}).render()</script></body></html>

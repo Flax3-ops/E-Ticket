@@ -1,0 +1,45 @@
+{
+    "database": "tiket_loadtest",
+    "rows": 100000,
+    "before": {
+        "status_prioritas": {
+            "median_ms": 0.9,
+            "explain_type": "ALL",
+            "explain_key": null,
+            "explain_rows": "98955"
+        },
+        "sla": {
+            "median_ms": 0.773,
+            "explain_type": "ALL",
+            "explain_key": null,
+            "explain_rows": "98955"
+        },
+        "judul": {
+            "median_ms": 310.089,
+            "explain_type": "ALL",
+            "explain_key": null,
+            "explain_rows": "98955"
+        }
+    },
+    "after": {
+        "status_prioritas": {
+            "median_ms": 0.817,
+            "explain_type": "ref",
+            "explain_key": "idx_status_priority",
+            "explain_rows": "49477"
+        },
+        "sla": {
+            "median_ms": 1.084,
+            "explain_type": "ref",
+            "explain_key": "idx_status_priority",
+            "explain_rows": "49477"
+        },
+        "judul": {
+            "median_ms": 0.839,
+            "explain_type": "fulltext",
+            "explain_key": "ft_title",
+            "explain_rows": "1"
+        }
+    },
+    "measured_at_utc": "2026-11-16T13:56:58+00:00"
+}
