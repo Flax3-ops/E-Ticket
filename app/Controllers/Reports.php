@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Models\TicketListQuery;
 use Dompdf\Dompdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -10,26 +11,11 @@ class Reports extends BaseController
 {
     public function tickets()
     {
-        $db = db_connect();
-        $builder = $db->table('tickets t')->select('t.ticket_no, t.title, t.priority, t.status, t.created_at, c.name AS category_name')->join('categories c', 'c.id=t.category_id')->where('t.deleted_at', null);
-        foreach (['status', 'priority', 'category_id'] as $field) {
-            if ($value = $this->request->getGet($field)) {
-                $builder->where('t.' . $field, $value);
-            }
-        }
-        if ($search = trim((string) $this->request->getGet('q'))) {
-            if (str_starts_with(strtoupper($search), 'TKT-')) {
-                $builder->like('t.ticket_no', $search, 'after');
-            } elseif (mb_strlen($search) >= 3) {
-                $builder->where('MATCH(t.title) AGAINST (' . $db->escape($search) . ' IN NATURAL LANGUAGE MODE)', null, false);
-            } else {
-                $builder->like('t.title', $search);
-            }
-        }
+        $filters = array_map('strval', $this->request->getGet(['status', 'priority', 'category_id', 'q']));
         $sheet = (new Spreadsheet())->getActiveSheet();
         $sheet->fromArray(['Nomor', 'Judul', 'Kategori', 'Prioritas', 'Status', 'Dibuat UTC'], null, 'A1');
         $row = 2;
-        foreach ($builder->orderBy('t.id', 'DESC')->get()->getResultArray() as $ticket) {
+        foreach ((new TicketListQuery(db_connect()))->export($filters) as $ticket) {
             $sheet->fromArray([$ticket['ticket_no'], $ticket['title'], $ticket['category_name'], $ticket['priority'], $ticket['status'], $ticket['created_at']], null, 'A' . $row++);
         }
         $sheet->getStyle('A1:F1')->getFont()->setBold(true);

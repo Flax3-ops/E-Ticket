@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Models\TicketListQuery;
 use App\Services\ActivityLogger;
 use App\Services\TicketService;
 use DomainException;
@@ -10,32 +11,11 @@ class Tickets extends BaseController
 {
     public function index()
     {
-        $db = db_connect();
-        $role = (string) session('role');
-        $builder = $db->table('tickets t')->select('t.*, c.name AS category_name, u.name AS requester_name, p.name AS officer_name')->join('categories c', 'c.id=t.category_id')->join('users u', 'u.id=t.user_id')->join('users p', 'p.id=t.assigned_to', 'left')->where('t.deleted_at', null);
-        if ($role === 'pemohon') {
-            $builder->where('t.user_id', (int) session('user_id'));
-        }
-        foreach (['status', 'priority', 'category_id'] as $field) {
-            $value = (string) $this->request->getGet($field);
-            if ($value !== '') {
-                $builder->where('t.' . $field, $value);
-            }
-        }
-        $search = trim((string) $this->request->getGet('q'));
-        if ($search !== '') {
-            if (str_starts_with(strtoupper($search), 'TKT-')) {
-                $builder->like('t.ticket_no', $search, 'after');
-            } elseif (mb_strlen($search) >= 3) {
-                $builder->where('MATCH(t.title) AGAINST (' . $db->escape($search) . ' IN NATURAL LANGUAGE MODE)', null, false);
-            } else {
-                $builder->like('t.title', $search);
-            }
-        }
         $page = max(1, (int) $this->request->getGet('page'));
-        $count = (clone $builder)->countAllResults();
-        $tickets = $builder->orderBy('t.id', 'DESC')->limit(20, ($page - 1) * 20)->get()->getResultArray();
-        return view('tickets/index', ['tickets' => $tickets, 'categories' => $db->table('categories')->orderBy('name')->get()->getResultArray(), 'page' => $page, 'pages' => max(1, (int) ceil($count / 20))]);
+        $filters = array_map('strval', $this->request->getGet(['status', 'priority', 'category_id', 'q']));
+        $requester = session('role') === 'pemohon' ? (int) session('user_id') : null;
+        $result = (new TicketListQuery(db_connect()))->paginate($filters, $requester, $page, 20);
+        return view('tickets/index', ['tickets' => $result['rows'], 'categories' => db_connect()->table('categories')->orderBy('name')->get()->getResultArray(), 'page' => $page, 'pages' => max(1, (int) ceil($result['total'] / 20))]);
     }
 
     public function new()

@@ -1,0 +1,50 @@
+{
+    "label": "raw-sql-mysqli-v0.9",
+    "php": "8.2.12",
+    "diukur": "2026-11-16T16:36:09+00:00",
+    "catatan": "pemanasan 5x, 30 pengulangan, database tiket_loadtest 100.000 tiket",
+    "skenario": {
+        "halaman_pertama": {
+            "p50_ms": 1868.377,
+            "p95_ms": 2068.235,
+            "maks_ms": 2188.653,
+            "hasil": "20 baris/hal, total 100000"
+        },
+        "filter_status_prioritas": {
+            "p50_ms": 611.444,
+            "p95_ms": 744.202,
+            "maks_ms": 749.617,
+            "hasil": "20 baris/hal, total 25000"
+        },
+        "cari_judul_fulltext": {
+            "p50_ms": 0.591,
+            "p95_ms": 0.713,
+            "maks_ms": 0.798,
+            "hasil": "1 baris/hal, total 1"
+        },
+        "cari_nomor_tiket": {
+            "p50_ms": 4.653,
+            "p95_ms": 5.438,
+            "maks_ms": 5.709,
+            "hasil": "20 baris/hal, total 100"
+        },
+        "halaman_dalam_(5000)": {
+            "p50_ms": 1944.037,
+            "p95_ms": 2362.938,
+            "maks_ms": 2756.746,
+            "hasil": "20 baris/hal, total 100000"
+        },
+        "pemohon_sendiri": {
+            "p50_ms": 62.778,
+            "p95_ms": 71.286,
+            "maks_ms": 73.422,
+            "hasil": "20 baris/hal, total 526"
+        },
+        "ekspor_terfilter": {
+            "p50_ms": 0.252,
+            "p95_ms": 0.357,
+            "maks_ms": 0.404,
+            "hasil": "0 baris"
+        }
+    }
+}
