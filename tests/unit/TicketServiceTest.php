@@ -100,4 +100,15 @@ final class TicketServiceTest extends CIUnitTestCase
         $ticket = $service->find($id);
         $this->assertSame(4 * 3600, strtotime($ticket['sla_due_at'] . ' UTC') - strtotime($ticket['created_at'] . ' UTC'));
     }
+
+    public function testCanEditPolicy(): void
+    {
+        $base = ['user_id' => 10, 'status' => 'Baru', 'deleted_at' => null];
+        $this->assertTrue(TicketService::canEdit($base, 10, 'pemohon'));
+        $this->assertFalse(TicketService::canEdit($base, 11, 'pemohon'), 'pemohon lain');
+        $this->assertFalse(TicketService::canEdit(['status' => 'Diproses'] + $base, 10, 'pemohon'), 'bukan status Baru');
+        $this->assertFalse(TicketService::canEdit($base, 5, 'petugas'), 'petugas tidak boleh edit isi');
+        $this->assertTrue(TicketService::canEdit(['status' => 'Selesai'] + $base, 1, 'admin'));
+        $this->assertFalse(TicketService::canEdit(['deleted_at' => '2026-01-01 00:00:00'] + $base, 1, 'admin'), 'tiket soft delete');
+    }
 }

@@ -51,7 +51,8 @@ function ticketId(string $loc): int
 
 function pdo(): PDO
 {
-    return new PDO('mysql:host=127.0.0.1;dbname=tiket_demo;charset=utf8mb4', 'root', '');
+    // Database yang diuji; ubah lewat TIKET_TEST_DB bila aplikasi yang diuji memakai database lain.
+    return new PDO('mysql:host=127.0.0.1;dbname=' . (getenv('TIKET_TEST_DB') ?: 'tiket_demo') . ';charset=utf8mb4', 'root', '');
 }
 
 // ---------------------------------------------------------------- persiapan
@@ -106,8 +107,11 @@ check('TKT-01c', 'Kategori tidak ada ditolak', in_array($s, [302, 303], true) &&
 $row = pdo()->query("SELECT priority,status,sla_due_at,created_at,TIMESTAMPDIFF(HOUR,created_at,sla_due_at) h FROM tickets WHERE id=$tid")->fetch(PDO::FETCH_ASSOC);
 check('TKT-03', 'sla_due_at = created_at + 4 jam (Kritis)', (int) $row['h'] === 4, json_encode($row));
 
-[$s] = $u2->req('GET', "/tickets/$tid");
+[$s, $b] = $u2->req('GET', "/tickets/$tid");
 check('ACL-T01', 'Pemohon lain tidak bisa melihat tiket (404)', $s === 404, "status $s");
+check('LOG-04', 'Halaman galat ramah pengguna menampilkan kode kesalahan (E-TKT-404)', str_contains($b, 'E-TKT-404') && str_contains($b, '<html'), substr(strip_tags($b), 0, 80));
+[$s, $b] = $u2->req('GET', '/admin/users');
+check('LOG-04b', 'Galat 403 menampilkan kode E-ACL-403', $s === 403 && str_contains($b, 'E-ACL-403'), "status $s");
 [$s] = $u2->req('GET', "/tickets/$tid/edit");
 check('ACL-T02', 'Pemohon lain tidak bisa edit (403)', $s === 403, "status $s");
 [$s] = $u2->req('POST', "/tickets/$tid/comments", ['body' => 'Komentar liar']);
@@ -298,6 +302,10 @@ check('NTF-10a', 'Petugas tidak boleh acknowledge (403)', $s === 403, "status $s
 $admin->req('POST', "/alerts/$aid/ack");
 $r = pdo()->query("SELECT acknowledged_by, resolved_at FROM alerts WHERE id=$aid")->fetch(PDO::FETCH_ASSOC);
 check('NTF-10b', 'Admin acknowledge: acknowledged_by terisi, alert belum pulih', $r['acknowledged_by'] !== null && $r['resolved_at'] === null, json_encode($r));
+if (pdo()->query("SHOW COLUMNS FROM alerts LIKE 'acknowledged_at'")->fetch()) {
+    $at = pdo()->query("SELECT acknowledged_at FROM alerts WHERE id=$aid")->fetchColumn();
+    check('NTF-10c', 'Waktu acknowledge tersimpan (acknowledged_at, patch v1.1)', $at !== null && strtotime($at . ' UTC') > time() - 120, (string) $at);
+}
 
 // pengguna nonaktif: sesi berlaku langsung
 $u3 = login($base, 'pemohon3@tiket.local', 'u3', $tmp);

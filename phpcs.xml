@@ -5,7 +5,14 @@
     <file>app/Services</file>
     <file>app/Libraries</file>
     <file>app/Commands</file>
+    <file>app/Filters</file>
+    <file>app/Models</file>
+    <file>app/Entities</file>
+    <file>app/Helpers</file>
     <rule ref="PSR12">
+        <!-- PENGECUALIAN GUIDELINE (Unit 13 elemen 3): PSR-12 menetapkan panjang baris sebagai batas LUNAK (soft limit),
+             bukan aturan wajib. Kueri Query Builder berantai dan larik asosiatif data tiket lebih terbaca satu baris
+             daripada dipecah paksa. Pengecualian ini hanya untuk panjang baris; aturan PSR-12 lain tetap berlaku. -->
         <exclude name="Generic.Files.LineLength"/>
     </rule>
 </ruleset>

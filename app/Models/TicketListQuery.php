@@ -25,18 +25,26 @@ class TicketListQuery
      */
     public function paginate(array $filters, ?int $requesterId, int $page, int $perPage = 20): array
     {
-        $builder = $this->db->table('tickets t')
+        $offset = max(0, ($page - 1) * $perPage);
+        // Deferred join (patch v1.1): subquery hanya memilih id halaman ini lewat indeks idx_active_list
+        // (urut id menurun, berhenti setelah $perPage baris), baru kemudian JOIN ke tabel lain. Tanpa ini
+        // optimizer MariaDB memulai dari `categories` (2 baris) lalu menyortir ratusan ribu baris
+        // (benchmark A10: halaman pertama 2 detik pada 100.000 tiket).
+        $ids = $this->db->table('tickets t')->select('t.id');
+        $this->applyConditions($ids, $filters, $requesterId);
+        $ids->orderBy('t.id', 'DESC')->limit($perPage, $offset);
+        $rows = $this->db->newQuery()->fromSubquery($ids, 'page')
             ->select('t.*, c.name AS category_name, u.name AS requester_name, p.name AS officer_name')
+            ->join('tickets t', 't.id = page.id')
             ->join('categories c', 'c.id = t.category_id')
             ->join('users u', 'u.id = t.user_id')
-            ->join('users p', 'p.id = t.assigned_to', 'left');
-        $this->applyConditions($builder, $filters, $requesterId);
-        // Hitungan total tanpa JOIN: kondisi hanya memakai kolom tabel tickets.
+            ->join('users p', 'p.id = t.assigned_to', 'left')
+            ->orderBy('t.id', 'DESC')
+            ->get()->getResultArray();
+        // Hitungan total tanpa JOIN: kondisi hanya memakai kolom tabel tickets (dilayani indeks covering).
         $counter = $this->db->table('tickets t');
         $this->applyConditions($counter, $filters, $requesterId);
-        $total = $counter->countAllResults();
-        $rows = $builder->orderBy('t.id', 'DESC')->limit($perPage, max(0, ($page - 1) * $perPage))->get()->getResultArray();
-        return ['rows' => $rows, 'total' => $total];
+        return ['rows' => $rows, 'total' => $counter->countAllResults()];
     }
 
     /**
@@ -68,9 +76,13 @@ class TicketListQuery
         if ($search === '') {
             return;
         }
-        // Catatan migrasi: like() Query Builder hanya meng-escape tanda kutip, BUKAN wildcard % dan _
-        // (versi raw v0.9 meng-escape keduanya). escapeLikeString() menyamakan perilaku; ditemukan oleh
-        // TicketListQueryEquivalenceTest.
+        // PENGECUALIAN GUIDELINE (Unit 13 elemen 3): best practice proyek adalah memakai metode Query Builder
+        // (where/like) tanpa SQL mentah. Tiga kondisi di bawah memakai fragmen SQL mentah karena:
+        //  1. like() Query Builder hanya meng-escape tanda kutip, BUKAN wildcard % dan _ (versi raw v0.9
+        //     meng-escape keduanya; ditemukan oleh TicketListQueryEquivalenceTest). Fragmen
+        //     `LIKE ... ESCAPE '!'` + escapeLikeString() menjaga perilaku yang sama.
+        //  2. MATCH ... AGAINST (FULLTEXT) tidak punya API Query Builder.
+        // Nilai pengguna selalu melewati escapeLikeString()/escape(), sehingga tetap aman dari injeksi.
         $like = $this->db->escapeLikeString($search);
         if (str_starts_with(strtoupper($search), 'TKT-')) {
             $builder->where("t.ticket_no LIKE '" . $like . "%' ESCAPE '!'", null, false);

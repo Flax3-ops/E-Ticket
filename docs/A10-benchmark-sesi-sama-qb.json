@@ -1,0 +1,50 @@
+{
+    "label": "sesi-sama-qb",
+    "php": "8.2.12",
+    "diukur": "2026-11-16T16:50:23+00:00",
+    "catatan": "pemanasan 5x, 30 pengulangan, database tiket_loadtest 100.000 tiket",
+    "skenario": {
+        "halaman_pertama": {
+            "p50_ms": 1966.353,
+            "p95_ms": 2364.875,
+            "maks_ms": 2422.323,
+            "hasil": "20 baris/hal, total 100000"
+        },
+        "filter_status_prioritas": {
+            "p50_ms": 630.772,
+            "p95_ms": 791.195,
+            "maks_ms": 835.816,
+            "hasil": "20 baris/hal, total 25000"
+        },
+        "cari_judul_fulltext": {
+            "p50_ms": 0.571,
+            "p95_ms": 0.688,
+            "maks_ms": 0.842,
+            "hasil": "1 baris/hal, total 1"
+        },
+        "cari_nomor_tiket": {
+            "p50_ms": 5.769,
+            "p95_ms": 6.606,
+            "maks_ms": 6.794,
+            "hasil": "20 baris/hal, total 100"
+        },
+        "halaman_dalam_(5000)": {
+            "p50_ms": 2257.516,
+            "p95_ms": 2829.275,
+            "maks_ms": 3075.126,
+            "hasil": "20 baris/hal, total 100000"
+        },
+        "pemohon_sendiri": {
+            "p50_ms": 7.628,
+            "p95_ms": 14.877,
+            "maks_ms": 52.871,
+            "hasil": "20 baris/hal, total 526"
+        },
+        "ekspor_terfilter": {
+            "p50_ms": 0.306,
+            "p95_ms": 0.604,
+            "maks_ms": 0.685,
+            "hasil": "0 baris"
+        }
+    }
+}

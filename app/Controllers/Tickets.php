@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\TicketListQuery;
+use App\Models\TicketModel;
 use App\Services\ActivityLogger;
 use App\Services\TicketService;
 use DomainException;
@@ -43,20 +44,21 @@ class Tickets extends BaseController
         $db = db_connect();
         $ticket = (new TicketService($db))->find($id);
         if (! $ticket || ! TicketService::canView($ticket, (int) session('user_id'), (string) session('role'))) {
-            return $this->response->setStatusCode(404)->setBody('Tiket tidak ditemukan.');
+            return friendly_error(404, 'E-TKT-404', 'Tiket tidak ditemukan');
         }
         $ticket['category_name'] = $db->table('categories')->where('id', $ticket['category_id'])->get()->getRow('name');
         $ticket['requester_name'] = $db->table('users')->where('id', $ticket['user_id'])->get()->getRow('name');
         $comments = $db->table('comments c')->select('c.*, u.name')->join('users u', 'u.id=c.user_id')->where('c.ticket_id', $id)->orderBy('c.id')->get()->getResultArray();
         $officers = session('role') === 'admin' ? $db->table('users')->select('id,name')->where('role', 'petugas')->where('is_active', 1)->orderBy('name')->get()->getResultArray() : [];
-        return view('tickets/show', ['officers' => $officers, 'ticket' => $ticket, 'comments' => $comments, 'attachments' => $db->table('attachments')->where('ticket_id', $id)->get()->getResultArray(), 'logs' => $db->table('ticket_logs')->where('ticket_id', $id)->orderBy('id')->get()->getResultArray()]);
+        $overdue = (new TicketModel())->findTicket($id)?->isOverdue() ?? false;
+        return view('tickets/show', ['overdue' => $overdue, 'officers' => $officers, 'ticket' => $ticket, 'comments' => $comments, 'attachments' => $db->table('attachments')->where('ticket_id', $id)->get()->getResultArray(), 'logs' => $db->table('ticket_logs')->where('ticket_id', $id)->orderBy('id')->get()->getResultArray()]);
     }
 
     public function edit(int $id)
     {
         $ticket = (new TicketService(db_connect()))->find($id);
-        if (! $ticket || $ticket['deleted_at'] || ! (session('role') === 'admin' || (session('role') === 'pemohon' && (int) $ticket['user_id'] === (int) session('user_id') && $ticket['status'] === 'Baru'))) {
-            return $this->response->setStatusCode(403)->setBody('Akses ditolak.');
+        if (! $ticket || ! TicketService::canEdit($ticket, (int) session('user_id'), (string) session('role'))) {
+            return friendly_error(403, 'E-ACL-403', 'Akses ditolak');
         }
         return view('tickets/form', ['ticket' => $ticket, 'categories' => db_connect()->table('categories')->orderBy('name')->get()->getResultArray()]);
     }
@@ -64,8 +66,8 @@ class Tickets extends BaseController
     public function update(int $id)
     {
         $ticket = (new TicketService(db_connect()))->find($id);
-        if (! $ticket || $ticket['deleted_at'] || ! (session('role') === 'admin' || (session('role') === 'pemohon' && (int) $ticket['user_id'] === (int) session('user_id') && $ticket['status'] === 'Baru'))) {
-            return $this->response->setStatusCode(403)->setBody('Akses ditolak.');
+        if (! $ticket || ! TicketService::canEdit($ticket, (int) session('user_id'), (string) session('role'))) {
+            return friendly_error(403, 'E-ACL-403', 'Akses ditolak');
         }
         $data = $this->validatedData();
         if ($data === null) {

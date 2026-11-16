@@ -5,5 +5,12 @@ parameters:
         - app/Services
         - app/Libraries
         - app/Commands
+        - app/Filters
+        - app/Models
+        - app/Entities
+        - app/Helpers
     bootstrapFiles:
         - vendor/codeigniter4/framework/system/Test/bootstrap.php
+    scanFiles:
+        - app/Helpers/error_helper.php
+        - app/Helpers/time_helper.php

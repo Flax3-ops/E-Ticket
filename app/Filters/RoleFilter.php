@@ -16,7 +16,8 @@ class RoleFilter implements FilterInterface
             return $authResult;
         }
         if (! in_array(session('role'), $arguments ?? [], true)) {
-            return service('response')->setStatusCode(403)->setBody('Akses ditolak.');
+            helper('error');
+            return friendly_error(403, 'E-ACL-403', 'Akses ditolak');
         }
         return null;
     }

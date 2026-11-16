@@ -7,6 +7,13 @@ use CodeIgniter\Database\BaseConnection;
 
 class AlertService
 {
+    /** Tiket Kritis yang belum diambil melewati batas ini memicu alert (F-NTF-05a). */
+    public const CRITICAL_UNASSIGNED_SECONDS = 1800;
+    /** Pengingat untuk alert yang belum pulih dikirim paling sering sekali per interval ini (F-NTF-07). */
+    public const REMINDER_INTERVAL_SECONDS = 900;
+    /** Jumlah pemeriksaan normal berturut-turut sebelum alert dinyatakan pulih (F-NTF-08). */
+    public const NORMAL_CHECKS_TO_RESOLVE = 2;
+
     public function __construct(private readonly BaseConnection $db, private readonly ?MonitorService $monitor = null)
     {
     }
@@ -15,15 +22,16 @@ class AlertService
     {
         $now = gmdate('Y-m-d H:i:s');
         $conditions = [];
-        $critical = $this->db->table('tickets')->select('id, ticket_no, assigned_to')->where('priority', 'Kritis')->where('status', 'Baru')->where('assigned_to', null)->where('deleted_at', null)->where('created_at <', gmdate('Y-m-d H:i:s', time() - 1800))->get()->getResultArray();
+        $critical = $this->db->table('tickets')->select('id, ticket_no, assigned_to')->where('priority', 'Kritis')->where('status', 'Baru')->where('assigned_to', null)->where('deleted_at', null)->where('created_at <', gmdate('Y-m-d H:i:s', time() - self::CRITICAL_UNASSIGNED_SECONDS))->get()->getResultArray();
         foreach ($critical as $ticket) {
             $conditions['critical_unassigned:ticket:' . $ticket['id']] = ['rule' => 'critical_unassigned', 'object' => 'ticket:' . $ticket['id'], 'message' => $ticket['ticket_no'] . ' belum diambil lebih dari 30 menit', 'recipients' => $this->staffIds()];
         }
-        foreach ($this->db->table('v_ticket_sla')->where('is_overdue', 1)->get()->getResultArray() as $item) {
-            $ticket = $this->db->table('tickets')->select('assigned_to')->where('id', $item['id'])->get()->getRowArray();
-            $recipients = $this->adminIds();
-            if ($ticket && $ticket['assigned_to']) {
-                $recipients[] = (int) $ticket['assigned_to'];
+        // Satu query bergabung (sebelumnya satu query tambahan per tiket terlambat: N+1).
+        $adminIds = $this->adminIds();
+        foreach ($this->db->table('v_ticket_sla s')->select('s.id, s.ticket_no, t.assigned_to')->join('tickets t', 't.id = s.id')->where('s.is_overdue', 1)->get()->getResultArray() as $item) {
+            $recipients = $adminIds;
+            if ($item['assigned_to']) {
+                $recipients[] = (int) $item['assigned_to'];
             }
             $conditions['sla_overdue:ticket:' . $item['id']] = ['rule' => 'sla_overdue', 'object' => 'ticket:' . $item['id'], 'message' => $item['ticket_no'] . ' melewati SLA', 'recipients' => array_unique($recipients)];
         }
@@ -58,7 +66,7 @@ class AlertService
                         $notifier->notify((int) $userId, 'alert', $condition['message'], '/alerts');
                     }
                 } else {
-                    $repeat = strtotime($now) - strtotime($active['last_notified_at']) >= 900;
+                    $repeat = strtotime($now) - strtotime($active['last_notified_at']) >= self::REMINDER_INTERVAL_SECONDS;
                     $this->db->table('alerts')->where('id', $active['id'])->update(['occurrences' => (int) $active['occurrences'] + 1, 'last_seen_at' => $now, 'last_notified_at' => $repeat ? $now : $active['last_notified_at'], 'normal_checks' => 0, 'updated_at' => $now]);
                     if ($repeat) {
                         foreach ($condition['recipients'] as $userId) {
@@ -77,7 +85,7 @@ class AlertService
                 continue;
             }
             $checks = (int) $active['normal_checks'] + 1;
-            if ($checks < 2) {
+            if ($checks < self::NORMAL_CHECKS_TO_RESOLVE) {
                 $this->db->table('alerts')->where('id', $active['id'])->update(['normal_checks' => $checks, 'updated_at' => $now]);
                 continue;
             }

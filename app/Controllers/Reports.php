@@ -33,7 +33,7 @@ class Reports extends BaseController
     {
         $month = (string) ($this->request->getGet('month') ?: gmdate('Y-m'));
         if (! preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
-            return $this->response->setStatusCode(400)->setBody('Bulan tidak valid.');
+            return friendly_error(400, 'E-LAP-400', 'Format bulan tidak valid (gunakan YYYY-MM)');
         }
         $rows = db_connect()->table('tickets')->select('status, COUNT(*) AS total')->where('deleted_at', null)->like('created_at', $month, 'after')->groupBy('status')->get()->getResultArray();
         $html = '<h1>Laporan Tiket ' . esc($month) . '</h1><table border="1" cellpadding="8"><tr><th>Status</th><th>Jumlah</th></tr>';

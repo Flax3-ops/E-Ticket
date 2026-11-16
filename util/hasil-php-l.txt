@@ -1,0 +1,40 @@
+$ php -l util/koreksi-sintaks/sebelum.php
+PHP Parse error:  syntax error, unexpected token "}", expecting ";" in util/koreksi-sintaks/sebelum.php on line 12
+
+Parse error: syntax error, unexpected token "}", expecting ";" in util/koreksi-sintaks/sebelum.php on line 12
+Errors parsing util/koreksi-sintaks/sebelum.php
+(kode keluar 255)
+
+$ php -l util/koreksi-sintaks/sesudah.php
+No syntax errors detected in util/koreksi-sintaks/sesudah.php
+
+$ php util/koreksi-sintaks/sesudah.php
+Diskon: 20%
+
+$ php -l util/01_biaya_layanan.php
+No syntax errors detected in util/01_biaya_layanan.php
+$ php -l util/02_hitung_sla.php
+No syntax errors detected in util/02_hitung_sla.php
+$ php -l util/03_csv_ringkasan.php
+No syntax errors detected in util/03_csv_ringkasan.php
+$ php -l util/04_array_prioritas.php
+No syntax errors detected in util/04_array_prioritas.php
+$ php -l util/05_menu.php
+No syntax errors detected in util/05_menu.php
+$ php -l util/06_array_dua_dimensi.php
+No syntax errors detected in util/06_array_dua_dimensi.php
+$ php -l oop-demo/demo.php
+No syntax errors detected in oop-demo/demo.php
+$ php -l algoritma/algorithms.php
+No syntax errors detected in algoritma/algorithms.php
+$ php -l algoritma/benchmark.php
+No syntax errors detected in algoritma/benchmark.php
+$ php -l algoritma/tiket.php
+No syntax errors detected in algoritma/tiket.php
+
+$ php util/06_array_dua_dimensi.php
+Dimensi: 2, baris: 3, kolom: 4
+Kategori          Rendah   Sedang   Tinggi   Kritis   Jumlah
+Perangkat keras   7        4        6        0        17
+Akun dan akses    2        9        1        3        15
+Jaringan          3        5        2        1        11

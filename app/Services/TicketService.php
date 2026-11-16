@@ -9,6 +9,9 @@ use RuntimeException;
 
 class TicketService
 {
+    /** Pemohon boleh membuka ulang tiket Selesai paling lama 7 x 24 jam setelah resolved_at (SRS 4.2.1). */
+    public const REOPEN_WINDOW_SECONDS = 7 * 86400;
+
     private DatabaseNotifier $notifier;
     private ActivityLogger $activity;
 
@@ -24,6 +27,15 @@ class TicketService
             return $role === 'admin';
         }
         return $role === 'admin' || $role === 'petugas' || (int) $ticket['user_id'] === $userId;
+    }
+
+    /** Aturan edit isi tiket (SRS 4.2.2): Admin semua tiket aktif; Pemohon hanya tiket sendiri berstatus Baru. */
+    public static function canEdit(array $ticket, int $userId, string $role): bool
+    {
+        if ($ticket['deleted_at'] !== null) {
+            return false;
+        }
+        return $role === 'admin' || ($role === 'pemohon' && (int) $ticket['user_id'] === $userId && $ticket['status'] === 'Baru');
     }
 
     public static function canParticipate(array $ticket, int $userId, string $role): bool
@@ -99,7 +111,7 @@ class TicketService
         }
         $from = $ticket['status'];
         $allowed = ($from === 'Diproses' && $to === 'Selesai' && $role === 'petugas' && (int) $ticket['assigned_to'] === $actorId)
-            || ($from === 'Selesai' && $to === 'Diproses' && $role === 'pemohon' && (int) $ticket['user_id'] === $actorId && strtotime((string) $ticket['resolved_at']) >= time() - 7 * 86400)
+            || ($from === 'Selesai' && $to === 'Diproses' && $role === 'pemohon' && (int) $ticket['user_id'] === $actorId && strtotime((string) $ticket['resolved_at']) >= time() - self::REOPEN_WINDOW_SECONDS)
             || ($from === 'Selesai' && $to === 'Ditutup' && ($role === 'admin' || ($role === 'pemohon' && (int) $ticket['user_id'] === $actorId)))
             || ($role === 'admin' && $from !== 'Ditutup' && in_array($to, ['Baru', 'Diproses', 'Selesai'], true) && $from !== $to);
         if (! $allowed || trim($note) === '') {

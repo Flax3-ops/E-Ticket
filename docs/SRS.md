@@ -3,8 +3,8 @@
 
 | Atribut | Nilai |
 |---|---|
-| Versi dokumen | 0.3 (draf) |
-| Tanggal | 16 November 2026 |
+| Versi dokumen | 0.4 (draf) |
+| Tanggal | 17 November 2026 |
 | Penyusun | (isi nama asesi) |
 | Skema sertifikasi | Web Developer, 03/02/LSPP1/SKM.03/01/2022 |
 | Tujuan | Portofolio bukti 17 unit kompetensi FR.APL.02 |
@@ -17,6 +17,7 @@
 | 0.1 | 16-11-2026 | Draf awal | (isi) |
 | 0.2 | 16-11-2026 | Perjelas aturan tiket, SLA, alert, pengujian, dan keterlacakan 17 unit | (isi) |
 | 0.3 | 16-11-2026 | Sesuaikan versi CI4 dan paket ekspor dengan hasil instalasi serta tambahkan sequence nomor tiket | (isi) |
+| 0.4 | 17-11-2026 | Rencana rilis §9 disesuaikan dengan urutan kerja nyata (tag v0.8, v0.9-audit, v0.9, v1.0, v1.1); tambah endpoint acknowledge alert dan penugasan admin; tambah matriks status bukti `docs/MATRIKS-KETERLACAKAN.md` | (isi) |
 
 ---
 
@@ -375,13 +376,13 @@ Semua tabel memakai InnoDB, `utf8mb4`, primary key `id` BIGINT UNSIGNED AUTO_INC
 | `users` | name, email (unique), password_hash, role ENUM('pemohon','petugas','admin'), is_active, locked_until | idx_role |
 | `otp_codes` | user_id, code_hash, expires_at, attempts, used_at | FK users |
 | `categories` | name (unique), description | - |
-| `tickets` | ticket_no (unique), user_id, category_id, assigned_to, status_changed_by, title, description, priority ENUM, status ENUM, sla_due_at, resolved_at, deleted_at | FK users (termasuk `status_changed_by`), categories; index ditambah di v1.1: `idx_status_priority`, `idx_sla_due`, FULLTEXT `ft_title` |
+| `tickets` | ticket_no (unique), user_id, category_id, assigned_to, status_changed_by, title, description, priority ENUM, status ENUM, sla_due_at, resolved_at, deleted_at | FK users (termasuk `status_changed_by`), categories; index ditambah di v1.1: `idx_status_priority`, `idx_sla_due`, `idx_active_list (deleted_at, status, priority)`, FULLTEXT `ft_title` |
 | `ticket_sequences` | ticket_date (PK), last_no | Sequence atomik per hari untuk `TKT-YYYYMMDD-XXXX`; maksimal 9.999 tiket/hari |
 | `ticket_logs` | ticket_id, old_status, new_status, changed_by, changed_at | FK tickets; diisi trigger |
 | `comments` | ticket_id, user_id, body | FK tickets, users |
 | `attachments` | ticket_id, original_name, stored_name, mime, size | FK tickets |
 | `notifications` | user_id, type, message, link, read_at | FK users; idx_user_read |
-| `alerts` | rule_code, object_key, active_key, level, message, occurrences, first_seen_at, last_seen_at, last_notified_at, normal_checks, resolved_at, acknowledged_by | unique `active_key`; berisi `rule_code + object_key` saat aktif, `NULL` saat pulih |
+| `alerts` | rule_code, object_key, active_key, level, message, occurrences, first_seen_at, last_seen_at, last_notified_at, normal_checks, resolved_at, acknowledged_by, acknowledged_at (v1.1) | unique `active_key`; berisi `rule_code + object_key` saat aktif, `NULL` saat pulih |
 | `resource_metrics` | cpu_pct, ram_used_mb, ram_total_mb, disk_used_gb, disk_total_gb, db_connections, db_max_connections, query_ms | idx_created_at |
 | `activity_logs` | user_id, action, entity, entity_id, ip, user_agent | idx_user, idx_created_at |
 | `settings` | key (unique), value | - |
@@ -401,7 +402,7 @@ Semua tabel memakai InnoDB, `utf8mb4`, primary key `id` BIGINT UNSIGNED AUTO_INC
 | Procedure | `sp_officer_ranking(start, end)` | Peringkat petugas |
 | Trigger | `trg_ticket_status_log` | AFTER UPDATE pada `tickets`, menulis ke `ticket_logs` jika status berubah; `changed_by = NEW.status_changed_by`; menolak perubahan status tanpa pelaku |
 | Trigger | `trg_ticket_before_insert` | Mengisi `sla_due_at = created_at + fn_sla_hours(priority)`; perubahan prioritas oleh Admin dihitung ulang di Service dalam transaksi |
-| Index | `idx_status_priority`, `idx_sla_due`, `ft_title` | Dibuat di migrasi v1.1, diukur dengan `EXPLAIN` |
+| Index | `idx_status_priority`, `idx_sla_due`, `ft_title`, `idx_active_list` | Dibuat di migrasi, diukur dengan `EXPLAIN` dan benchmark 100.000 tiket (A02, A10) |
 | Hak akses | `CREATE USER 'tiket_app'@'localhost'` + `GRANT` terbatas; `REVOKE` contoh | Bukti Unit 7 dan 8 |
 
 Semua objek SQL disimpan juga sebagai berkas di `database/sql/` (mis. `01_views.sql`, `02_functions.sql`, `03_procedures.sql`, `04_triggers.sql`, `05_indexes.sql`, `06_grants.sql`, `07_transaction_demo.sql`) agar mudah dicetak dan dieksekusi.
@@ -455,9 +456,11 @@ A04 mencatat skenario dari dashboard setelah login: buat tiket (maksimal 4 aksi)
 | GET | `/api/notifications/unread` | JSON notifikasi belum dibaca |
 | POST | `/api/notifications/{id}/read` | Tandai dibaca |
 | GET | `/api/alerts/active` | JSON alert aktif |
-| GET | `/monitor/metrics` | JSON metrik resource |
+| GET | `/monitor/metrics` | JSON metrik resource (snapshot dipakai ulang 3 detik agar pembacaan OS tidak dipanggil tiap permintaan) |
+| POST | `/alerts/{id}/ack` | Admin mengakui alert aktif (F-NTF-10); mengisi `acknowledged_by` dan `acknowledged_at`, tidak memulihkan alert |
+| POST | `/tickets/{id}/assign` | Admin menetapkan/memindahkan petugas dengan alasan (F-TKT-12) |
 
-`/api/dashboard/summary` mengembalikan objek `cards`, `by_status`, `by_category`, dan `by_day`. Setiap item agregat menyebut kunci kelompok dan `total`; tiket soft delete dikecualikan. Endpoint tanpa izin mengembalikan HTTP 403, objek yang tidak ada/tersembunyi HTTP 404, dan metrik yang gagal dibaca memakai `null` dengan status `unavailable`, bukan angka nol.
+`/api/dashboard/summary` mengembalikan objek `cards`, `by_status`, `by_category`, dan `by_day`. Setiap item agregat menyebut kunci kelompok dan `total`; tiket soft delete dikecualikan. Endpoint JSON tanpa sesi atau tanpa izin mengembalikan HTTP 403 (bukan pengalihan HTML), objek yang tidak ada/tersembunyi HTTP 404, dan metrik yang gagal dibaca memakai `null` dengan status `unavailable`, bukan angka nol.
 
 ### 7.3 Antarmuka CLI (spark)
 
@@ -497,17 +500,22 @@ A02 mencatat lingkup sistem, jumlah pengguna/data awal dan proyeksi 10×/100×, 
 
 ## 9. Rencana rilis, migrasi, dan pembaruan (Unit 10 dan 17)
 
-| Versi | Isi | Bukti |
+Rencana awal (v0.1 s.d. v1.1 dibangun bertahap sejak awal) tidak sesuai dengan urutan kerja nyata: aplikasi inti dibangun langsung dengan Query Builder dan baru dikirim sebagai satu commit. Agar riwayat tidak dipalsukan, rencana rilis direvisi menjadi urutan yang benar-benar terjadi dan dapat diperiksa lewat `git tag`:
+
+| Tag | Isi | Bukti |
 |---|---|---|
-| v0.1 | Kerangka CI4, autentikasi, CRUD tiket dengan **raw SQL `mysqli`** | Commit dan tag `v0.1` |
-| v0.5 | Komentar, lampiran, notifikasi, dashboard | Tag `v0.5` |
-| **v1.0** | **Migrasi raw SQL ke Query Builder CI4**, alert, monitor, slideshow, ekspor | Tag `v1.0`, dokumen A10 |
-| **v1.1** | Patch: index performa, perbaikan temuan code review, perbaikan bug | Tag `v1.1`, ringkasan diff, A17 |
+| `v0.8` | Implementasi awal seluruh aplikasi (commit `5874d8d`), sudah memakai Query Builder | `git show v0.8` |
+| `v0.9-audit` | Perbaikan hasil audit fitur wajib: akses, lampiran, monitor; uji HTTP 106 pemeriksaan dan uji beban | `git diff v0.8 v0.9-audit`, A14 |
+| **`v0.9`** | **Baseline raw SQL `mysqli`** untuk modul daftar/pencarian/ekspor tiket (`App\Models\TicketListQuery`), diukur dan diuji | `git show v0.9`, `docs/A10-benchmark-raw-sql-v0.9.json` |
+| **`v1.0`** | **Migrasi raw SQL ke Query Builder** pada modul yang sama dengan uji kesetaraan fungsi | `git diff v0.9 v1.0`, A10 |
+| **`v1.1`** | Patch: migrasi `ListIndexesAndAckTime` (index daftar tiket + kolom `acknowledged_at`), perbaikan temuan code review, halaman galat berkode | `git diff v1.0 v1.1`, A13, A17 |
+
+Catatan kejujuran: baseline raw SQL (`v0.9`) dibuat pada 16–17 November 2026 sebagai modul pembanding untuk bukti Unit 10, bukan sebagai sisa pengembangan yang lebih lama. Seluruh tag dibuat pada rentang waktu yang sama dengan commit-nya; tidak ada tanggal commit yang dimanipulasi. Fitur aplikasi lain (komentar, lampiran, notifikasi, dashboard, alert, monitor, slideshow, ekspor) sudah ada pada `v0.8`.
 
 ### 9.1 Migrasi teknologi (Unit 10)
 
-- **Dari**: query raw SQL `mysqli` dengan prepared statement yang ditulis langsung di model (lebih sulit dirawat dan dibandingkan antar modul).
-- **Ke**: CI4 Query Builder dengan binding otomatis.
+- **Dari**: query raw SQL `mysqli` dengan prepared statement yang ditulis langsung di `TicketListQuery` (perakitan WHERE dan `bind_param` manual; tag `v0.9`).
+- **Ke**: CI4 Query Builder dengan binding otomatis (tag `v1.0`). Lingkup migrasi: daftar/pencarian/pagination tiket dan ekspor Excel.
 - **Tambahan opsional**: penyimpanan sesi dari file (`FileHandler`) ke database (`DatabaseHandler`).
 - Dokumen A10 memuat: alasan, inventaris query yang dimigrasi, perbandingan kode sebelum/sesudah, hasil uji fungsi yang sama, risiko, dan rencana rollback.
 - A10 mencatat versi teknologi lama dan baru, keunggulan berdasarkan kebutuhan aplikasi, keputusan migrasi, serta fitur khusus Query Builder yang digunakan (binding parameter, builder kondisi, dan transaksi). Perbandingan memakai skenario dan hasil yang sama sebelum/sesudah migrasi; tag Git membuktikan kedua keadaan benar-benar pernah diimplementasikan.
@@ -631,7 +639,7 @@ tiket-layanan/
 
 ### 14.2 Kriteria selesai per rilis
 
-- **v1.0 selesai** bila seluruh kebutuhan berprioritas W pada Bab 4 berjalan pada data demo, dan semua migrasi dapat di-rollback.
+- **v1.0 selesai** bila seluruh kebutuhan berprioritas W pada Bab 4 berjalan pada data demo (diperiksa `tests/http/run.php`), modul yang dimigrasi lulus uji kesetaraan fungsi, dan semua migrasi dapat di-rollback.
 - **v1.1 selesai** bila index ditambahkan dengan bukti EXPLAIN, PHPStan level 5 tanpa error, uji PHPUnit lulus, dan temuan code review utama diperbaiki.
 - **Portofolio selesai** bila setiap baris matriks Bab 12 memiliki artefak dan dokumen bukti.
 
@@ -639,7 +647,7 @@ tiket-layanan/
 
 ## 15. Matriks keterlacakan elemen kompetensi
 
-Nomor elemen di bawah mengacu pada `daftar-17-unit.md`. Rentang nomor mencakup semua subelemen di dalamnya. Kolom bukti adalah target yang harus dibuat dan diperiksa; pencantuman di SRS saja belum berarti unit telah dipenuhi.
+Status bukti aktual (direncanakan / diimplementasikan / diuji / terbukti) per subelemen dicatat pada `docs/MATRIKS-KETERLACAKAN.md`. Nomor elemen di bawah mengacu pada `daftar-17-unit.md`. Rentang nomor mencakup semua subelemen di dalamnya. Kolom bukti adalah target yang harus dibuat dan diperiksa; pencantuman di SRS saja belum berarti unit telah dipenuhi.
 
 | Unit | Elemen/subelemen | Kebutuhan/rancangan | Artefak dan verifikasi |
 |---|---|---|---|

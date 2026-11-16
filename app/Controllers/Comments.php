@@ -12,7 +12,7 @@ class Comments extends BaseController
         $db = db_connect();
         $ticket = (new TicketService($db))->find($ticketId);
         if (! $ticket || ! TicketService::canParticipate($ticket, (int) session('user_id'), (string) session('role'))) {
-            return $this->response->setStatusCode(403)->setBody('Akses ditolak.');
+            return friendly_error(403, 'E-ACL-403', 'Akses ditolak');
         }
         $body = trim((string) $this->request->getPost('body'));
         if (mb_strlen($body) < 2 || mb_strlen($body) > 5000) {

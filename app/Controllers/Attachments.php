@@ -11,7 +11,7 @@ class Attachments extends BaseController
         $db = db_connect();
         $ticket = (new TicketService($db))->find($ticketId);
         if (! $ticket || ! TicketService::canParticipate($ticket, (int) session('user_id'), (string) session('role'))) {
-            return $this->response->setStatusCode(403)->setBody('Akses ditolak.');
+            return friendly_error(403, 'E-ACL-403', 'Akses ditolak');
         }
         if ($db->table('attachments')->where('ticket_id', $ticketId)->countAllResults() >= 3) {
             return redirect()->back()->with('error', 'Maksimal 3 lampiran per tiket.');
@@ -39,11 +39,11 @@ class Attachments extends BaseController
         $attachment = $db->table('attachments')->where('id', $id)->get()->getRowArray();
         $ticket = $attachment ? (new TicketService($db))->find((int) $attachment['ticket_id']) : null;
         if (! $ticket || ! TicketService::canParticipate($ticket, (int) session('user_id'), (string) session('role'))) {
-            return $this->response->setStatusCode(404)->setBody('Lampiran tidak ditemukan.');
+            return friendly_error(404, 'E-ATT-404', 'Lampiran tidak ditemukan');
         }
         $path = WRITEPATH . 'uploads/' . basename($attachment['stored_name']);
         if (! is_file($path)) {
-            return $this->response->setStatusCode(404)->setBody('Berkas tidak ditemukan.');
+            return friendly_error(404, 'E-ATT-410', 'Berkas lampiran tidak ada di penyimpanan');
         }
         return $this->response->download($path, null)->setFileName($attachment['original_name']);
     }
