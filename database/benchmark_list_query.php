@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Benchmark modul App\Models\TicketListQuery pada database tiket_loadtest (100.000 tiket).
  * Dipakai untuk membandingkan implementasi raw SQL mysqli (v0.9) dan Query Builder (v1.0) — A10, NF-02.
  *
- * php database/benchmark_list_query.php <label> [--out docs/A10-benchmark-<label>.json]
+ * php database/benchmark_list_query.php <label> [--impl=qb|raw] [--out docs/A10-benchmark-<label>.json]
  * Pemanasan 5 kali, lalu 30 pengulangan per skenario; dicatat p50, p95, maks (ms).
  */
 
@@ -19,16 +19,20 @@ require HOMEPATH . 'vendor/codeigniter4/framework/system/Test/bootstrap.php';
 
 $label = $argv[1] ?? 'tanpa-label';
 $out = null;
+$impl = 'qb';
 foreach ($argv as $i => $a) {
     if ($a === '--out') {
         $out = $argv[$i + 1] ?? null;
+    }
+    if (str_starts_with($a, '--impl=')) {
+        $impl = substr($a, 7); // qb = App\Models\TicketListQuery; raw = salinan lama di tests/_support/Legacy
     }
 }
 $db = \Config\Database::connect([
     'DBDriver' => 'MySQLi', 'hostname' => '127.0.0.1', 'username' => 'root', 'password' => '', 'database' => 'tiket_loadtest',
     'port' => 3306, 'charset' => 'utf8mb4', 'DBCollat' => 'utf8mb4_general_ci', 'DBDebug' => true,
 ]);
-$query = new \App\Models\TicketListQuery($db);
+$query = $impl === 'raw' ? new \Tests\Support\Legacy\RawTicketListQuery($db) : new \App\Models\TicketListQuery($db);
 $requesterId = (int) $db->query('SELECT user_id FROM tickets WHERE id = 500')->getRow()->user_id;
 
 $scenarios = [

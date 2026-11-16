@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
+use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
-use mysqli;
-use RuntimeException;
 
 /**
- * Akses data daftar/pencarian/ekspor tiket — VERSI RAW SQL `mysqli` (baseline v0.9, Unit 10).
+ * Akses data daftar/pencarian/ekspor tiket — VERSI QUERY BUILDER CI4 (v1.0, hasil migrasi Unit 10).
  *
- * Seluruh query ditulis sebagai string SQL dengan prepared statement mysqli. Pengikatan tipe
- * (`bind_param`) dan perakitan klausa WHERE dilakukan manual di sini; versi v1.0 memigrasikannya
- * ke Query Builder CI4 dengan perilaku yang sama (lihat docs/A10-migrasi-teknologi.md).
+ * Menggantikan implementasi raw SQL `mysqli` v0.9: kontrak publik (paginate/export) dan perilaku
+ * dipertahankan; yang berubah hanya cara akses data. Keunggulan yang dipakai: binding parameter
+ * otomatis, builder kondisi yang dapat dikomposisi/di-clone, dan escape LIKE bawaan.
+ * Implementasi lama disimpan sebagai pembanding uji di tests/_support/Legacy/.
  */
 class TicketListQuery
 {
@@ -25,12 +25,17 @@ class TicketListQuery
      */
     public function paginate(array $filters, ?int $requesterId, int $page, int $perPage = 20): array
     {
-        [$where, $types, $params] = $this->conditions($filters, $requesterId);
-        $total = (int) $this->run('SELECT COUNT(*) AS n FROM tickets t WHERE ' . $where, $types, $params)[0]['n'];
-        $sql = 'SELECT t.*, c.name AS category_name, u.name AS requester_name, p.name AS officer_name '
-            . 'FROM tickets t JOIN categories c ON c.id = t.category_id JOIN users u ON u.id = t.user_id '
-            . 'LEFT JOIN users p ON p.id = t.assigned_to WHERE ' . $where . ' ORDER BY t.id DESC LIMIT ?, ?';
-        $rows = $this->run($sql, $types . 'ii', array_merge($params, [max(0, ($page - 1) * $perPage), $perPage]));
+        $builder = $this->db->table('tickets t')
+            ->select('t.*, c.name AS category_name, u.name AS requester_name, p.name AS officer_name')
+            ->join('categories c', 'c.id = t.category_id')
+            ->join('users u', 'u.id = t.user_id')
+            ->join('users p', 'p.id = t.assigned_to', 'left');
+        $this->applyConditions($builder, $filters, $requesterId);
+        // Hitungan total tanpa JOIN: kondisi hanya memakai kolom tabel tickets.
+        $counter = $this->db->table('tickets t');
+        $this->applyConditions($counter, $filters, $requesterId);
+        $total = $counter->countAllResults();
+        $rows = $builder->orderBy('t.id', 'DESC')->limit($perPage, max(0, ($page - 1) * $perPage))->get()->getResultArray();
         return ['rows' => $rows, 'total' => $total];
     }
 
@@ -40,76 +45,39 @@ class TicketListQuery
      */
     public function export(array $filters): array
     {
-        [$where, $types, $params] = $this->conditions($filters, null);
-        $sql = 'SELECT t.ticket_no, t.title, t.priority, t.status, t.created_at, c.name AS category_name '
-            . 'FROM tickets t JOIN categories c ON c.id = t.category_id WHERE ' . $where . ' ORDER BY t.id DESC';
-        return $this->run($sql, $types, $params);
+        $builder = $this->db->table('tickets t')
+            ->select('t.ticket_no, t.title, t.priority, t.status, t.created_at, c.name AS category_name')
+            ->join('categories c', 'c.id = t.category_id');
+        $this->applyConditions($builder, $filters, null);
+        return $builder->orderBy('t.id', 'DESC')->get()->getResultArray();
     }
 
-    /** @return array{0: string, 1: string, 2: list<int|string>} klausa WHERE, tipe bind_param, nilai */
-    private function conditions(array $filters, ?int $requesterId): array
+    private function applyConditions(BaseBuilder $builder, array $filters, ?int $requesterId): void
     {
-        $where = ['t.deleted_at IS NULL'];
-        $types = '';
-        $params = [];
+        $builder->where('t.deleted_at', null);
         if ($requesterId !== null) {
-            $where[] = 't.user_id = ?';
-            $types .= 'i';
-            $params[] = $requesterId;
+            $builder->where('t.user_id', $requesterId);
         }
         foreach (['status', 'priority', 'category_id'] as $field) {
             $value = (string) ($filters[$field] ?? '');
             if ($value !== '') {
-                $where[] = 't.' . $field . ' = ?';
-                $types .= 's';
-                $params[] = $value;
+                $builder->where('t.' . $field, $value);
             }
         }
         $search = trim((string) ($filters['q'] ?? ''));
-        if ($search !== '') {
-            if (str_starts_with(strtoupper($search), 'TKT-')) {
-                $where[] = 't.ticket_no LIKE ?';
-                $params[] = $this->escapeLike($search) . '%';
-            } elseif (mb_strlen($search) >= 3) {
-                $where[] = 'MATCH(t.title) AGAINST (? IN NATURAL LANGUAGE MODE)';
-                $params[] = $search;
-            } else {
-                $where[] = 't.title LIKE ?';
-                $params[] = '%' . $this->escapeLike($search) . '%';
-            }
-            $types .= 's';
+        if ($search === '') {
+            return;
         }
-        return [implode(' AND ', $where), $types, $params];
-    }
-
-    private function escapeLike(string $value): string
-    {
-        return addcslashes($value, '%_\\');
-    }
-
-    /**
-     * @param list<int|string> $params
-     * @return list<array<string, mixed>>
-     */
-    private function run(string $sql, string $types, array $params): array
-    {
-        // Koneksi CI4 bersifat lazy: connID bernilai false sebelum ada query pertama.
-        $this->db->initialize();
-        /** @var mysqli $mysqli */
-        $mysqli = $this->db->connID;
-        $stmt = $mysqli->prepare($sql);
-        if ($stmt === false) {
-            throw new RuntimeException('E-DB-001 prepare gagal: ' . $mysqli->error);
+        // Catatan migrasi: like() Query Builder hanya meng-escape tanda kutip, BUKAN wildcard % dan _
+        // (versi raw v0.9 meng-escape keduanya). escapeLikeString() menyamakan perilaku; ditemukan oleh
+        // TicketListQueryEquivalenceTest.
+        $like = $this->db->escapeLikeString($search);
+        if (str_starts_with(strtoupper($search), 'TKT-')) {
+            $builder->where("t.ticket_no LIKE '" . $like . "%' ESCAPE '!'", null, false);
+        } elseif (mb_strlen($search) >= 3) {
+            $builder->where('MATCH(t.title) AGAINST (' . $this->db->escape($search) . ' IN NATURAL LANGUAGE MODE)', null, false);
+        } else {
+            $builder->where("t.title LIKE '%" . $like . "%' ESCAPE '!'", null, false);
         }
-        if ($params !== []) {
-            $stmt->bind_param($types, ...$params);
-        }
-        if (! $stmt->execute()) {
-            throw new RuntimeException('E-DB-002 execute gagal: ' . $stmt->error);
-        }
-        $result = $stmt->get_result();
-        $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
-        $stmt->close();
-        return $rows;
     }
 }
