@@ -1,8 +1,8 @@
 # Hasil uji HTTP lintas peran
 
-Dijalankan: 2026-11-16 16:41 UTC — `php tests/http/run.php http://localhost:8082`
+Dijalankan: 2026-11-16 17:47 UTC — `php tests/http/run.php http://localhost:8082`
 
-Ringkasan: **106 dari 106** pemeriksaan lulus.
+Ringkasan: **119 dari 119** pemeriksaan lulus.
 
 | ID | Pemeriksaan | Hasil |
 |---|---|---|
@@ -47,6 +47,8 @@ Ringkasan: **106 dari 106** pemeriksaan lulus.
 | TKT-01c | Kategori tidak ada ditolak | Lulus |
 | TKT-03 | sla_due_at = created_at + 4 jam (Kritis) | Lulus |
 | ACL-T01 | Pemohon lain tidak bisa melihat tiket (404) | Lulus |
+| LOG-04 | Halaman galat ramah pengguna menampilkan kode kesalahan (E-TKT-404) | Lulus |
+| LOG-04b | Galat 403 menampilkan kode E-ACL-403 | Lulus |
 | ACL-T02 | Pemohon lain tidak bisa edit (403) | Lulus |
 | ACL-T03 | Pemohon lain tidak bisa komentar (403) | Lulus |
 | ACL-T04 | Pemohon lain tidak bisa ubah status (tidak ada perubahan) | Lulus |
@@ -106,6 +108,17 @@ Ringkasan: **106 dari 106** pemeriksaan lulus.
 | LAP-02b | Bulan tidak valid -> 400 | Lulus |
 | NTF-10a | Petugas tidak boleh acknowledge (403) | Lulus |
 | NTF-10b | Admin acknowledge: acknowledged_by terisi, alert belum pulih | Lulus |
+| NTF-10c | Waktu acknowledge tersimpan (acknowledged_at, patch v1.1) | Lulus |
+| MST-01a | Admin menambah kategori | Lulus |
+| MST-01b | Admin mengubah kategori | Lulus |
+| MST-01c | Nama kategori terlalu pendek ditolak | Lulus |
+| MST-01d | Kategori yang dipakai tiket tidak bisa dihapus | Lulus |
+| MST-01e | Admin menghapus kategori yang tidak dipakai | Lulus |
+| MST-01f | Pemohon tidak bisa menambah kategori (403) | Lulus |
+| MST-02a | Admin menambah pengguna; password disimpan sebagai hash bcrypt | Lulus |
+| MST-02b | Email tidak valid ditolak | Lulus |
+| MST-02c | Admin mengubah peran pengguna | Lulus |
+| MST-02d | Pengguna baru dapat login (OTP) dan peran baru berlaku langsung | Lulus |
 | AUTH-ACT | Sesi pengguna yang dinonaktifkan admin langsung ditolak | Lulus |
 | AUTH-ACT2 | Login pengguna nonaktif ditolak | Lulus |
 | AUTH-04 | OTP salah 3x mengunci akun: login benar berikutnya ditolak | Lulus |

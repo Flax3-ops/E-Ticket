@@ -275,7 +275,9 @@ $countRows = static function (string $xlsxBody) use ($tmp): int {
     $f = "$tmp/x.xlsx";
     file_put_contents($f, $xlsxBody);
     $z = new ZipArchive();
-    $z->open($f);
+    if ($z->open($f) !== true) {
+        return -1; // bukan berkas xlsx (mis. halaman galat)
+    }
     $xml = (string) $z->getFromName('xl/worksheets/sheet1.xml');
     return preg_match_all('/<row /', $xml) - 1;
 };
@@ -292,20 +294,47 @@ check('LAP-02', 'Ekspor PDF bulanan (PDF valid)', $s === 200 && str_starts_with(
 check('LAP-02b', 'Bulan tidak valid -> 400', $s === 400, "status $s");
 
 // F-NTF-10 acknowledge
-$aid = (int) pdo()->query('SELECT id FROM alerts WHERE resolved_at IS NULL AND acknowledged_by IS NULL LIMIT 1')->fetchColumn();
-if (! $aid) {
-    pdo()->exec("INSERT INTO alerts (rule_code,object_key,active_key,level,message,occurrences,first_seen_at,last_seen_at,created_at,updated_at) VALUES ('UJI','http','UJI:http','critical','Alert uji HTTP',1,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())");
-    $aid = (int) pdo()->lastInsertId();
-}
+// Alert uji khusus (idempoten): hapus sisa uji sebelumnya, buat baru memakai SATU koneksi agar lastInsertId valid.
+$db = pdo();
+$db->exec("DELETE FROM alerts WHERE rule_code = 'UJI'");
+$db->exec("INSERT INTO alerts (rule_code,object_key,active_key,level,message,occurrences,first_seen_at,last_seen_at,created_at,updated_at) VALUES ('UJI','http','UJI:http','critical','Alert uji HTTP',1,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())");
+$aid = (int) $db->lastInsertId();
 [$s] = $p1->req('POST', "/alerts/$aid/ack");
 check('NTF-10a', 'Petugas tidak boleh acknowledge (403)', $s === 403, "status $s");
 $admin->req('POST', "/alerts/$aid/ack");
-$r = pdo()->query("SELECT acknowledged_by, resolved_at FROM alerts WHERE id=$aid")->fetch(PDO::FETCH_ASSOC);
-check('NTF-10b', 'Admin acknowledge: acknowledged_by terisi, alert belum pulih', $r['acknowledged_by'] !== null && $r['resolved_at'] === null, json_encode($r));
+$r = pdo()->query("SELECT acknowledged_by, resolved_at FROM alerts WHERE id=$aid")->fetch(PDO::FETCH_ASSOC) ?: [];
+check('NTF-10b', 'Admin acknowledge: acknowledged_by terisi, alert belum pulih', isset($r['acknowledged_by']) && $r['acknowledged_by'] !== null && $r['resolved_at'] === null, json_encode($r));
 if (pdo()->query("SHOW COLUMNS FROM alerts LIKE 'acknowledged_at'")->fetch()) {
     $at = pdo()->query("SELECT acknowledged_at FROM alerts WHERE id=$aid")->fetchColumn();
     check('NTF-10c', 'Waktu acknowledge tersimpan (acknowledged_at, patch v1.1)', $at !== null && strtotime($at . ' UTC') > time() - 120, (string) $at);
 }
+
+// F-MST-01/02: CRUD kategori dan pengguna oleh admin
+$cname = 'Kategori Uji ' . date('His');
+$admin->req('POST', '/admin/categories', ['name' => $cname, 'description' => 'uji']);
+$cid = (int) pdo()->query("SELECT id FROM categories WHERE name=" . pdo()->quote($cname))->fetchColumn();
+check('MST-01a', 'Admin menambah kategori', $cid > 0);
+$admin->req('POST', '/admin/categories', ['id' => $cid, 'name' => $cname . ' ubah', 'description' => 'diubah']);
+check('MST-01b', 'Admin mengubah kategori', pdo()->query("SELECT description FROM categories WHERE id=$cid")->fetchColumn() === 'diubah');
+$admin->req('POST', '/admin/categories', ['name' => 'x', 'description' => '']);
+check('MST-01c', 'Nama kategori terlalu pendek ditolak', (int) pdo()->query("SELECT COUNT(*) FROM categories WHERE name='x'")->fetchColumn() === 0);
+$admin->req('POST', "/admin/categories/1/delete");
+check('MST-01d', 'Kategori yang dipakai tiket tidak bisa dihapus', (int) pdo()->query('SELECT COUNT(*) FROM categories WHERE id=1')->fetchColumn() === 1);
+$admin->req('POST', "/admin/categories/$cid/delete");
+check('MST-01e', 'Admin menghapus kategori yang tidak dipakai', (int) pdo()->query("SELECT COUNT(*) FROM categories WHERE id=$cid")->fetchColumn() === 0);
+[$s] = $u1->req('POST', '/admin/categories', ['name' => 'Kategori liar', 'description' => '']);
+check('MST-01f', 'Pemohon tidak bisa menambah kategori (403)', $s === 403 && (int) pdo()->query("SELECT COUNT(*) FROM categories WHERE name='Kategori liar'")->fetchColumn() === 0, "status $s");
+$email = 'uji' . date('His') . '@tiket.local';
+$admin->req('POST', '/admin/users', ['name' => 'Pengguna Uji', 'email' => $email, 'role' => 'petugas', 'password' => 'Rahasia123!', 'is_active' => 1]);
+$urow = pdo()->query('SELECT id, role, password_hash FROM users WHERE email=' . pdo()->quote($email))->fetch(PDO::FETCH_ASSOC);
+check('MST-02a', 'Admin menambah pengguna; password disimpan sebagai hash bcrypt', $urow && $urow['role'] === 'petugas' && str_starts_with((string) $urow['password_hash'], '$2y$') && $urow['password_hash'] !== 'Rahasia123!');
+$admin->req('POST', '/admin/users', ['name' => 'Pengguna Uji', 'email' => 'bukan-email', 'role' => 'petugas', 'password' => 'Rahasia123!']);
+check('MST-02b', 'Email tidak valid ditolak', (int) pdo()->query("SELECT COUNT(*) FROM users WHERE email='bukan-email'")->fetchColumn() === 0);
+$admin->req('POST', '/admin/users', ['id' => $urow['id'], 'name' => 'Pengguna Uji', 'email' => $email, 'role' => 'admin', 'is_active' => 1]);
+check('MST-02c', 'Admin mengubah peran pengguna', pdo()->query('SELECT role FROM users WHERE id=' . (int) $urow['id'])->fetchColumn() === 'admin');
+$pw = login($base, $email, 'baru', $tmp, 'Rahasia123!');
+[$s] = $pw->req('GET', '/admin/users');
+check('MST-02d', 'Pengguna baru dapat login (OTP) dan peran baru berlaku langsung', $s === 200, "status $s");
 
 // pengguna nonaktif: sesi berlaku langsung
 $u3 = login($base, 'pemohon3@tiket.local', 'u3', $tmp);

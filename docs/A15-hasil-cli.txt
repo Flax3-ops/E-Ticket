@@ -1,0 +1,22 @@
+$ php spark monitor:collect  (2x)
+{"cpu_pct":5,"ram_used_mb":9349,"ram_total_mb":16106,"disk_used_gb":202.1,"disk_total_gb":246.42,"db_connections":1,"db_max_connections":151,"query_ms":100.3,"php_memory_mb":8,"status":"ok"}
+{"cpu_pct":12,"ram_used_mb":9342,"ram_total_mb":16106,"disk_used_gb":202.1,"disk_total_gb":246.42,"db_connections":1,"db_max_connections":151,"query_ms":17.96,"php_memory_mb":8,"status":"ok"}
+
+$ php spark alert:check  (3x berurutan)
+{"active":22,"checked_at":"2026-11-16 17:33:28"}
+{"active":22,"checked_at":"2026-11-16 17:33:29"}
+{"active":22,"checked_at":"2026-11-16 17:33:31"}
+
+id	cpu_pct	ram_used_mb	ram_total_mb	disk_used_gb	db_connections	created_at
+3	12.00	9342	16106	202.10	1	2026-11-16 17:33:27
+2	5.00	9349	16106	202.10	1	2026-11-16 17:33:26
+1	NULL	NULL	NULL	NULL	2	2026-11-16 13:31:27
+rule_code	object_key	occurrences	first_seen_at	last_seen_at	normal_checks	pulih
+sla_overdue	ticket:12	3	2026-11-16 17:33:28	2026-11-16 17:33:31	0	0
+sla_overdue	ticket:8	3	2026-11-16 17:33:28	2026-11-16 17:33:31	0	0
+critical_unassigned	ticket:96	3	2026-11-16 17:33:28	2026-11-16 17:33:31	0	0
+critical_unassigned	ticket:92	3	2026-11-16 17:33:28	2026-11-16 17:33:31	0	0
+critical_unassigned	ticket:84	3	2026-11-16 17:33:28	2026-11-16 17:33:31	0	0
+critical_unassigned	ticket:80	3	2026-11-16 17:33:28	2026-11-16 17:33:31	0	0
+notif_alert
+98

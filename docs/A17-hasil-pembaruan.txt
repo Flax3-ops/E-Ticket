@@ -1,0 +1,89 @@
+
+=== 0. Persiapan: worktree v1.0 dan database terpisah ===
+HEAD is now at 4dbb25c v1.0: migrasi akses data daftar/ekspor tiket dari raw SQL mysqli ke Query Builder (Unit 10)
+Versi kode terpasang: v1.0
+
+=== 1. Pasang v1.0 (migrasi dengan akun DBA, seed demo) ===
+CodeIgniter v4.7.6 Command Line Tool - Server Time: 2026-11-16 17:16:38 UTC+00:00
+Running all new migrations...
+	Running: (App) 2026-11-16-000001_App\Database\Migrations\InitialSchema
+	Running: (App) 2026-11-16-000002_App\Database\Migrations\DatabaseObjects
+	Running: (App) 2026-11-16-000003_App\Database\Migrations\PerformanceIndexes
+	Running: (App) 2026-11-16-000004_App\Database\Migrations\TicketSequences
+Migrations complete.
+Seeded: App\Database\Seeds\DemoSeeder
+Data awal   : users=10 tickets=100 comments=200 ticket_logs=49 notifications=449
+Skema v1.0  : idx_active_list=0 alerts.acknowledged_at=0 migrasi_tercatat=4
+
+=== 2. Uji asap v1.0 yang berjalan (uji HTTP versi v1.0 milik tag itu sendiri) ===
+Server uji aktif di port 8092
+FAIL  LOG-04  Halaman galat ramah pengguna menampilkan kode kesalahan (E-TKT-404)  -> Tiket tidak ditemukan.
+"use strict";(()=>{function m(n){if(!(n instanceof Eleme
+FAIL  LOG-04b  Galat 403 menampilkan kode E-ACL-403  -> status 403
+106/108 lulus
+Data setelah uji asap v1.0: users=10 tickets=102 comments=207 ticket_logs=55 notifications=464
+
+=== 3. Backup sebelum pembaruan (php spark backup:db) ===
+Backup: C:\Users\furqo\AppData\Local\Temp\tiket-upgrade-app\writable\backups\tiket_upgrade-20261116-171719.sql
+Berkas backup: tiket_upgrade-20261116-171719.sql (161309 byte)
+Data saat backup: users=10 tickets=102 comments=207 ticket_logs=55 notifications=464
+
+=== 4. Terapkan patch v1.1: checkout tag, composer install, migrate (DBA) ===
+Kode sekarang: v1.1
+Ringkasan diff v1.0..v1.1 (app/):
+ app/Controllers/Alerts.php                         |  2 +-
+ app/Controllers/Attachments.php                    |  6 +--
+ app/Controllers/BaseController.php                 |  2 +-
+ app/Controllers/Comments.php                       |  2 +-
+ app/Controllers/Reports.php                        |  2 +-
+ app/Controllers/Tickets.php                        | 14 +++---
+ .../2026-11-17-000005_ListIndexesAndAckTime.php    | 28 +++++++++++
+ app/Entities/Ticket.php                            | 55 ++++++++++++++++++++++
+ app/Filters/RoleFilter.php                         |  3 +-
+ app/Helpers/error_helper.php                       | 15 ++++++
+ app/Models/TicketListQuery.php                     | 32 +++++++++----
+ app/Models/TicketModel.php                         | 29 ++++++++++++
+ app/Services/AlertService.php                      | 24 ++++++----
+ app/Services/TicketService.php                     | 14 +++++-
+ app/Views/alerts/index.php                         |  2 +-
+ app/Views/errors/friendly.php                      | 18 +++++++
+ app/Views/tickets/show.php                         |  2 +-
+ 17 files changed, 215 insertions(+), 35 deletions(-)
+Running all new migrations...
+	Running: (App) 2026-11-17-000005_App\Database\Migrations\ListIndexesAndAckTime
+Migrations complete.
+Skema v1.1  : idx_active_list=3 alerts.acknowledged_at=1 migrasi_tercatat=5
+Data setelah migrasi (tidak boleh berkurang): users=10 tickets=102 comments=207 ticket_logs=55 notifications=464
+HASIL: jumlah data identik sebelum/sesudah migrasi
+
+=== 5. Uji asap v1.1 sesudah patch (uji HTTP versi v1.1) ===
+Server uji aktif di port 8092
+109/109 lulus
+
+=== 6. Rollback: migrate:rollback lalu kembali ke kode v1.0 ===
+Rolling back migrations to batch:  1
+	Rolling back: (App) 2026-11-17-000005_App\Database\Migrations\ListIndexesAndAckTime
+Done rolling back migrations.
+Skema setelah rollback: idx_active_list=0 alerts.acknowledged_at=0 migrasi_tercatat=4
+Kode kembali: v1.0
+Server uji aktif di port 8092
+FAIL  LOG-04  Halaman galat ramah pengguna menampilkan kode kesalahan (E-TKT-404)  -> Tiket tidak ditemukan.
+"use strict";(()=>{function m(n){if(!(n instanceof Eleme
+FAIL  LOG-04b  Galat 403 menampilkan kode E-ACL-403  -> status 403
+106/108 lulus
+Data setelah rollback dan uji asap v1.0: users=10 tickets=106 comments=221 ticket_logs=67 notifications=494
+
+=== 7. Pulihkan backup ke database TERPISAH dan bandingkan ===
+Restore ke tiket_upgrade_restore selesai dan hak tiket_app dipasang ulang.
+Data hasil restore: users=10 tickets=102 comments=207 ticket_logs=55 notifications=464
+HASIL: restore identik dengan data saat backup
+Objek hasil restore: triggers=2 routines=4 views=6
+Hak EXECUTE setelah restore (dipasang ulang skrip): 1
+
+=== 8. Terapkan ulang v1.1 sebagai keadaan akhir ===
+Running all new migrations...
+	Running: (App) 2026-11-17-000005_App\Database\Migrations\ListIndexesAndAckTime
+Skema akhir : idx_active_list=3 alerts.acknowledged_at=1 migrasi_tercatat=5
+Kode akhir  : v1.1
+
+Selesai. Worktree: C:\Users\furqo\AppData\Local\Temp/tiket-upgrade-app (hapus dengan: git worktree remove --force 'C:\Users\furqo\AppData\Local\Temp/tiket-upgrade-app')

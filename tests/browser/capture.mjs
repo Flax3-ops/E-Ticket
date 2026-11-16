@@ -6,6 +6,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
+import http from 'node:http';
 import path from 'node:path';
 
 const [, , exe, base, outDir, label, portArg] = process.argv;
@@ -14,17 +15,33 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 fs.mkdirSync(outDir, { recursive: true });
 
 // ---------------------------------------------------------------- login HTTP (cookie sesi)
+// node:http dengan Connection: close (fetch/undici bermasalah dengan server bawaan PHP -S yang HTTP/1.0).
+function httpReq(url, { method = 'GET', headers = {}, body } = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const req = http.request({ hostname: u.hostname, port: u.port, path: u.pathname + u.search, method, agent: false, headers: { ...headers, connection: 'close' } }, (res) => {
+      let text = '';
+      res.setEncoding('utf8');
+      res.on('data', (c) => (text += c));
+      res.on('end', () => resolve({ status: res.statusCode, setCookie: res.headers['set-cookie'] ?? [], text }));
+    });
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
 async function sessionFor(email) {
   const jar = new Map();
   const req = async (url, opt = {}) => {
     const headers = { ...(opt.headers || {}), cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; ') };
-    const r = await fetch(url, { ...opt, headers, redirect: 'manual' });
-    for (const c of r.headers.getSetCookie()) {
+    const r = await httpReq(url, { ...opt, headers });
+    for (const c of r.setCookie) {
       const kv = c.split(';')[0];
       const i = kv.indexOf('=');
       jar.set(kv.slice(0, i), kv.slice(i + 1));
     }
-    return r;
+    return { text: async () => r.text };
   };
   const token = (html) => /name="csrf_test_name"\s+value="([^"]+)"/.exec(html)?.[1] ?? '';
   const form = (o) => new URLSearchParams(o).toString();
@@ -47,6 +64,7 @@ class Page {
     this.id = 0;
     this.pending = new Map();
     this.errors = [];
+    this.urls = new Map();
     ws.addEventListener('message', (m) => {
       const msg = JSON.parse(m.data);
       if (msg.id && this.pending.has(msg.id)) {
@@ -57,8 +75,10 @@ class Page {
         this.errors.push('exception: ' + (msg.params.exceptionDetails.exception?.description || msg.params.exceptionDetails.text));
       } else if (msg.method === 'Runtime.consoleAPICalled' && msg.params.type === 'error') {
         this.errors.push('console.error: ' + msg.params.args.map((a) => a.value ?? a.description).join(' '));
+      } else if (msg.method === 'Network.requestWillBeSent') {
+        this.urls.set(msg.params.requestId, msg.params.request.url);
       } else if (msg.method === 'Network.loadingFailed' && !msg.params.canceled) {
-        this.errors.push('network: ' + msg.params.errorText);
+        this.errors.push('network: ' + msg.params.errorText + ' ' + (this.urls.get(msg.params.requestId) ?? '?'));
       } else if (msg.method === 'Network.responseReceived' && msg.params.response.status >= 400 && !/favicon/.test(msg.params.response.url)) {
         this.errors.push(`http ${msg.params.response.status}: ${msg.params.response.url}`);
       }
@@ -136,7 +156,7 @@ async function launch() {
   const ws = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((r) => ws.addEventListener('open', r));
   const page = new Page(ws);
-  for (const d of ['Page', 'Runtime', 'Network', 'Emulation']) await page.send(d + '.enable');
+  for (const d of ['Page', 'Runtime', 'Network']) await page.send(d + '.enable');
   return { proc, page, version: version.Browser, profile };
 }
 
@@ -200,7 +220,7 @@ const labels = [];
 const snap = async () => labels.push(await page.eval(`document.getElementById('slide-label').textContent`));
 await snap();
 for (let i = 0; i < 4; i++) { await page.click('#next'); await sleep(700); await snap(); }
-await page.shot(`${label}-desktop-slideshow-frame-grafik.png`);
+await page.shot(`${label}-desktop-slideshow-frame-petugas.png`);
 await page.click('#prev'); await sleep(700);
 const prevLabel = await page.eval(`document.getElementById('slide-label').textContent`);
 await page.click('#pause');
@@ -213,7 +233,10 @@ const playText = await page.eval(`document.getElementById('pause').textContent`)
 const autoA = await page.eval(`document.getElementById('slide-label').textContent`);
 await sleep(5600);
 const autoB = await page.eval(`document.getElementById('slide-label').textContent`);
-const fs1 = await page.eval(`(async () => { try { await document.documentElement.requestFullscreen(); const ok = !!document.fullscreenElement; if (ok) await document.exitFullscreen(); return ok ? 'ya' : 'tidak'; } catch (e) { return 'ditolak: ' + e.message; } })()`);
+// Layar penuh: headless menolak requestFullscreen; yang diverifikasi adalah klik tombol benar-benar memanggil API tersebut.
+await page.eval(`window.__fsCalls = 0; Element.prototype.requestFullscreen = function () { window.__fsCalls++; return Promise.resolve(); };`);
+await page.click('#fullscreen');
+const fs1 = (await page.eval('window.__fsCalls')) === 1 ? 'tombol memanggil requestFullscreen (headless tidak menampilkan layar penuh)' : 'tombol TIDAK memanggil requestFullscreen';
 report.interaksi.slideshow = { frame_berurutan: labels, jumlah_frame_unik: new Set(labels).size, prev_kembali_ke: prevLabel, teks_tombol_saat_jeda: pausedText, tidak_maju_saat_jeda: idleA === idleB, teks_tombol_saat_putar: playText, maju_otomatis: autoA !== autoB, layar_penuh: fs1 };
 
 // ---- skenario A04: hitung aksi (klik/submit) dari dashboard, memakai klik sungguhan

@@ -509,6 +509,7 @@ Rencana awal (v0.1 s.d. v1.1 dibangun bertahap sejak awal) tidak sesuai dengan u
 | **`v0.9`** | **Baseline raw SQL `mysqli`** untuk modul daftar/pencarian/ekspor tiket (`App\Models\TicketListQuery`), diukur dan diuji | `git show v0.9`, `docs/A10-benchmark-raw-sql-v0.9.json` |
 | **`v1.0`** | **Migrasi raw SQL ke Query Builder** pada modul yang sama dengan uji kesetaraan fungsi | `git diff v0.9 v1.0`, A10 |
 | **`v1.1`** | Patch: migrasi `ListIndexesAndAckTime` (index daftar tiket + kolom `acknowledged_at`), perbaikan temuan code review, halaman galat berkode | `git diff v1.0 v1.1`, A13, A17 |
+| `v1.1.1` | Perbaikan setelah uji browser: pembaca CPU/RAM Windows (`-EncodedCommand`), label waktu grafik monitor, komentar `slideshow.js`, dokumen A01–A17 dan bukti uji | `git diff v1.1 v1.1.1`, A11 #15–16 |
 
 Catatan kejujuran: baseline raw SQL (`v0.9`) dibuat pada 16–17 November 2026 sebagai modul pembanding untuk bukti Unit 10, bukan sebagai sisa pengembangan yang lebih lama. Seluruh tag dibuat pada rentang waktu yang sama dengan commit-nya; tidak ada tanggal commit yang dimanipulasi. Fitur aplikasi lain (komentar, lampiran, notifikasi, dashboard, alert, monitor, slideshow, ekspor) sudah ada pada `v0.8`.
 

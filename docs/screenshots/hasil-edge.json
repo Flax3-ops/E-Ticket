@@ -1,0 +1,375 @@
+{
+  "label": "edge",
+  "diuji": "2026-11-16T17:38:59.402Z",
+  "halaman": [
+    {
+      "viewport": "desktop",
+      "halaman": "login",
+      "url": "/login",
+      "judul": "Tiket Layanan",
+      "h1": "Masuk ke Tiket Layanan",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "dashboard-admin",
+      "url": "/",
+      "judul": "Tiket Layanan",
+      "h1": "Dashboard",
+      "overflow_horizontal": false,
+      "canvas": 3,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "tiket-daftar",
+      "url": "/tickets",
+      "judul": "Tiket Layanan",
+      "h1": "Daftar tiket",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "alert",
+      "url": "/alerts",
+      "judul": "Tiket Layanan",
+      "h1": "Alert",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "monitor",
+      "url": "/monitor",
+      "judul": "Tiket Layanan",
+      "h1": "Monitor resource",
+      "overflow_horizontal": false,
+      "canvas": 1,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "slideshow",
+      "url": "/slideshow",
+      "judul": "Tiket Layanan",
+      "h1": "Statistik layanan",
+      "overflow_horizontal": false,
+      "canvas": 1,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "admin-pengguna",
+      "url": "/admin/users",
+      "judul": "Tiket Layanan",
+      "h1": "Pengguna",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "admin-pengaturan",
+      "url": "/admin/settings",
+      "judul": "Tiket Layanan",
+      "h1": "SLA dan ambang alert",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "dashboard-petugas",
+      "url": "/",
+      "judul": "Tiket Layanan",
+      "h1": "Dashboard",
+      "overflow_horizontal": false,
+      "canvas": 3,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "notifikasi",
+      "url": "/notifications",
+      "judul": "Tiket Layanan",
+      "h1": "Notifikasi",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "dashboard-pemohon",
+      "url": "/",
+      "judul": "Tiket Layanan",
+      "h1": "Dashboard",
+      "overflow_horizontal": false,
+      "canvas": 3,
+      "galat": []
+    },
+    {
+      "viewport": "desktop",
+      "halaman": "tiket-form",
+      "url": "/tickets/new",
+      "judul": "Tiket Layanan",
+      "h1": "Buat tiket baru",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "login",
+      "url": "/login",
+      "judul": "Tiket Layanan",
+      "h1": "Masuk ke Tiket Layanan",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "dashboard-admin",
+      "url": "/",
+      "judul": "Tiket Layanan",
+      "h1": "Dashboard",
+      "overflow_horizontal": false,
+      "canvas": 3,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "tiket-daftar",
+      "url": "/tickets",
+      "judul": "Tiket Layanan",
+      "h1": "Daftar tiket",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "alert",
+      "url": "/alerts",
+      "judul": "Tiket Layanan",
+      "h1": "Alert",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "monitor",
+      "url": "/monitor",
+      "judul": "Tiket Layanan",
+      "h1": "Monitor resource",
+      "overflow_horizontal": false,
+      "canvas": 1,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "slideshow",
+      "url": "/slideshow",
+      "judul": "Tiket Layanan",
+      "h1": "Statistik layanan",
+      "overflow_horizontal": false,
+      "canvas": 1,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "admin-pengguna",
+      "url": "/admin/users",
+      "judul": "Tiket Layanan",
+      "h1": "Pengguna",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "admin-pengaturan",
+      "url": "/admin/settings",
+      "judul": "Tiket Layanan",
+      "h1": "SLA dan ambang alert",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "dashboard-petugas",
+      "url": "/",
+      "judul": "Tiket Layanan",
+      "h1": "Dashboard",
+      "overflow_horizontal": false,
+      "canvas": 3,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "notifikasi",
+      "url": "/notifications",
+      "judul": "Tiket Layanan",
+      "h1": "Notifikasi",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "dashboard-pemohon",
+      "url": "/",
+      "judul": "Tiket Layanan",
+      "h1": "Dashboard",
+      "overflow_horizontal": false,
+      "canvas": 3,
+      "galat": []
+    },
+    {
+      "viewport": "mobile360",
+      "halaman": "tiket-form",
+      "url": "/tickets/new",
+      "judul": "Tiket Layanan",
+      "h1": "Buat tiket baru",
+      "overflow_horizontal": false,
+      "canvas": 0,
+      "galat": []
+    }
+  ],
+  "interaksi": {
+    "grafik_dashboard": [
+      {
+        "id": "status-chart",
+        "rendered": true,
+        "width": 376,
+        "height": 300
+      },
+      {
+        "id": "category-chart",
+        "rendered": true,
+        "width": 376,
+        "height": 300
+      },
+      {
+        "id": "day-chart",
+        "rendered": true,
+        "width": 376,
+        "height": 300
+      }
+    ],
+    "tema": {
+      "sebelum_gelap": false,
+      "sesudah_klik_gelap": true,
+      "berubah": true
+    },
+    "slideshow": {
+      "frame_berurutan": [
+        "TOTAL TIKET",
+        "TIKET TERBUKA",
+        "LEWAT SLA",
+        "GRAFIK STATUS",
+        "PETUGAS TERATAS"
+      ],
+      "jumlah_frame_unik": 5,
+      "prev_kembali_ke": "GRAFIK STATUS",
+      "teks_tombol_saat_jeda": "Putar",
+      "tidak_maju_saat_jeda": true,
+      "teks_tombol_saat_putar": "Jeda",
+      "maju_otomatis": true,
+      "layar_penuh": "tombol memanggil requestFullscreen (headless tidak menampilkan layar penuh)"
+    }
+  },
+  "skenario_a04": {
+    "buat_tiket": {
+      "peran": "pemohon",
+      "aksi_klik": 2,
+      "batas": 4,
+      "lulus": true,
+      "langkah": [
+        "klik + Tiket baru",
+        "isi #title",
+        "isi #description",
+        "pilih #category=1",
+        "klik Buat tiket"
+      ],
+      "url_akhir": "/tickets/102",
+      "berhasil": true
+    },
+    "ambil_tiket": {
+      "peran": "petugas",
+      "aksi_klik": 3,
+      "batas": 3,
+      "lulus": true,
+      "langkah": [
+        "klik Tiket",
+        "klik a[href$=\"/tickets/102\"]",
+        "klik Ambil tiket"
+      ],
+      "url_akhir": "/tickets/102",
+      "berhasil": true
+    },
+    "komentar": {
+      "peran": "petugas",
+      "aksi_klik": 3,
+      "batas": 3,
+      "lulus": true,
+      "langkah": [
+        "klik Tiket",
+        "klik a[href$=\"/tickets/102\"]",
+        "isi textarea[name=body]",
+        "klik Kirim komentar"
+      ],
+      "url_akhir": "/tickets/102",
+      "berhasil": true
+    },
+    "selesaikan_tiket": {
+      "peran": "petugas",
+      "aksi_klik": 3,
+      "batas": 3,
+      "lulus": true,
+      "langkah": [
+        "klik Tiket",
+        "klik a[href$=\"/tickets/102\"]",
+        "isi form[action$=\"/status\"] textarea[name=note]",
+        "klik Simpan status"
+      ],
+      "url_akhir": "/tickets/102",
+      "berhasil": true
+    },
+    "tutup_tiket": {
+      "peran": "pemohon",
+      "aksi_klik": 3,
+      "batas": 3,
+      "lulus": true,
+      "langkah": [
+        "klik Tiket",
+        "klik a[href$=\"/tickets/102\"]",
+        "pilih form[action$=\"/status\"] select[name=status]=Ditutup",
+        "isi form[action$=\"/status\"] textarea[name=note]",
+        "klik Simpan status"
+      ],
+      "url_akhir": "/tickets/102",
+      "berhasil": true
+    },
+    "ekspor_laporan": {
+      "peran": "admin",
+      "aksi_klik": 2,
+      "batas": 4,
+      "lulus": true,
+      "langkah": [
+        "klik Tiket",
+        "klik Ekspor Excel"
+      ],
+      "url_akhir": "/tickets",
+      "catatan": "Unduhan berkas diperiksa terpisah (tests/http/run.php LAP-01); klik terakhir memicu unduhan."
+    }
+  },
+  "browser": "Edg/157.0.4341.60"
+}
